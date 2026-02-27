@@ -11,6 +11,9 @@ import JournalScreen from "../screens/JournalScreen";
 import LogSessionScreen from "../screens/LogSessionScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import EditProfileScreen from "../screens/EditProfileScreen";
+import TechniquesScreen from "../screens/TechniquesScreen";
+import TechniqueDetailScreen from "../screens/TechniqueDetailScreen";
+import type { Technique } from "../types";
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -28,6 +31,11 @@ export type ProfileStackParamList = {
   EditProfile: undefined;
 };
 
+export type TechniquesStackParamList = {
+  TechniquesHome: undefined;
+  TechniqueDetail: { technique: Technique };
+};
+
 // --- Placeholder tab screens ---
 
 function PlaceholderScreen({ name }: { name: string }) {
@@ -36,10 +44,6 @@ function PlaceholderScreen({ name }: { name: string }) {
       <Text style={styles.text}>{name}</Text>
     </View>
   );
-}
-
-function TechniquesScreen() {
-  return <PlaceholderScreen name="Techniques" />;
 }
 
 function CoachScreen() {
@@ -56,6 +60,7 @@ const Tab = createBottomTabNavigator();
 const AuthStack_ = createNativeStackNavigator<AuthStackParamList>();
 const JournalStack = createNativeStackNavigator<JournalStackParamList>();
 const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
+const TechniquesStack_ = createNativeStackNavigator<TechniquesStackParamList>();
 
 function JournalStackScreen() {
   return (
@@ -67,6 +72,21 @@ function JournalStackScreen() {
         options={{ presentation: "modal", animation: "slide_from_bottom" }}
       />
     </JournalStack.Navigator>
+  );
+}
+
+function TechniquesStackScreen() {
+  return (
+    <TechniquesStack_.Navigator screenOptions={{ headerShown: false }}>
+      <TechniquesStack_.Screen
+        name="TechniquesHome"
+        component={TechniquesScreen}
+      />
+      <TechniquesStack_.Screen
+        name="TechniqueDetail"
+        component={TechniqueDetailScreen}
+      />
+    </TechniquesStack_.Navigator>
   );
 }
 
@@ -101,7 +121,7 @@ function MainTabs() {
       }}
     >
       <Tab.Screen name="Journal" component={JournalStackScreen} />
-      <Tab.Screen name="Techniques" component={TechniquesScreen} />
+      <Tab.Screen name="Techniques" component={TechniquesStackScreen} />
       <Tab.Screen name="Coach" component={CoachScreen} />
       <Tab.Screen name="Community" component={CommunityScreen} />
       <Tab.Screen name="Profile" component={ProfileStackScreen} />

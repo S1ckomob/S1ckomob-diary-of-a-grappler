@@ -20,6 +20,20 @@ export interface Profile {
   created_at: string;
 }
 
+export type Difficulty = "beginner" | "intermediate" | "advanced";
+
+export interface Technique {
+  id: string;
+  name: string;
+  category: string;
+  subcategory: string | null;
+  description: string | null;
+  difficulty: Difficulty;
+  is_beginner: boolean;
+  video_url: string | null;
+  created_at: string;
+}
+
 export type SessionType = "rolling" | "drilling" | "competition";
 
 export interface Session {
