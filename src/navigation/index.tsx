@@ -21,6 +21,7 @@ import AICoachScreen from "../screens/AICoachScreen";
 import JoinGymScreen from "../screens/JoinGymScreen";
 import AddGoalScreen from "../screens/AddGoalScreen";
 import CommunityScreen from "../screens/CommunityScreen";
+import ComposePostScreen from "../screens/ComposePostScreen";
 import type { Technique } from "../types";
 
 export type AuthStackParamList = {
@@ -44,6 +45,11 @@ export type TechniquesStackParamList = {
   TechniqueDetail: { technique: Technique };
 };
 
+export type CommunityStackParamList = {
+  CommunityHome: undefined;
+  ComposePost: undefined;
+};
+
 export type CoachStackParamList = {
   CoachHome: undefined;
   AICoach: undefined;
@@ -58,6 +64,7 @@ const AuthStack_ = createNativeStackNavigator<AuthStackParamList>();
 const JournalStack = createNativeStackNavigator<JournalStackParamList>();
 const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
 const TechniquesStack_ = createNativeStackNavigator<TechniquesStackParamList>();
+const CommunityStack_ = createNativeStackNavigator<CommunityStackParamList>();
 const CoachStack_ = createNativeStackNavigator<CoachStackParamList>();
 
 function JournalStackScreen() {
@@ -85,6 +92,19 @@ function TechniquesStackScreen() {
         component={TechniqueDetailScreen}
       />
     </TechniquesStack_.Navigator>
+  );
+}
+
+function CommunityStackScreen() {
+  return (
+    <CommunityStack_.Navigator screenOptions={{ headerShown: false }}>
+      <CommunityStack_.Screen name="CommunityHome" component={CommunityScreen} />
+      <CommunityStack_.Screen
+        name="ComposePost"
+        component={ComposePostScreen}
+        options={{ presentation: "modal", animation: "slide_from_bottom" }}
+      />
+    </CommunityStack_.Navigator>
   );
 }
 
@@ -166,7 +186,7 @@ function MainTabs() {
       />
       <Tab.Screen
         name="Community"
-        component={CommunityScreen}
+        component={CommunityStackScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people-outline" size={size} color={color} />
@@ -226,7 +246,13 @@ const linking: any = {
           AddGoal: "add-goal",
         },
       },
-      Community: "community",
+      Community: {
+        initialRouteName: "CommunityHome" as const,
+        screens: {
+          CommunityHome: "community",
+          ComposePost: "compose-post",
+        },
+      },
       Profile: {
         initialRouteName: "ProfileHome" as const,
         screens: {

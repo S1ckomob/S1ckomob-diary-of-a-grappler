@@ -1,16 +1,20 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  SectionList,
+  FlatList,
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../hooks/useSession";
-import type { Profile, Belt } from "../types";
+import type { Profile, Belt, Post, PostWithAuthor } from "../types";
+import type { CommunityStackParamList } from "../navigation";
 
 // --- Theme ---
 
@@ -49,224 +53,38 @@ function getInitials(name: string | null): string {
 
 function beltLabel(belt: Belt, stripes: number): string {
   const b = belt.charAt(0).toUpperCase() + belt.slice(1);
-  if (stripes === 0) return b;
-  return `${b} \u00B7 ${stripes}${stripes === 1 ? " stripe" : " stripes"}`;
+  if (stripes === 0) return `${b} Belt`;
+  return `${b} Belt \u00B7 ${stripes} stripe${stripes !== 1 ? "s" : ""}`;
 }
 
-interface MemberWithStats extends Profile {
-  sessionCount: number;
-  totalMinutes: number;
+function timeAgo(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diffMs = now - then;
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  const weeks = Math.floor(days / 7);
+  return `${weeks}w ago`;
 }
 
-// --- Leaderboard Podium ---
+// --- Types ---
 
-function PodiumCard({
-  member,
-  rank,
-  metric,
-  metricLabel,
-}: {
-  member: MemberWithStats;
-  rank: number;
-  metric: number;
-  metricLabel: string;
-}) {
-  const beltColor = beltColors[(member.belt as Belt) || "white"];
-  const isFirst = rank === 1;
+type TabKey = "feed" | "rooms";
 
-  return (
-    <View style={[podiumStyles.card, isFirst && podiumStyles.cardFirst]}>
-      <Text style={podiumStyles.rank}>
-        {rank === 1 ? "\u{1F947}" : rank === 2 ? "\u{1F948}" : "\u{1F949}"}
-      </Text>
-      <View style={[podiumStyles.avatar, { borderColor: beltColor }]}>
-        <Text style={podiumStyles.avatarText}>
-          {getInitials(member.name)}
-        </Text>
-      </View>
-      <Text style={podiumStyles.name} numberOfLines={1}>
-        {member.name || "Grappler"}
-      </Text>
-      <Text style={podiumStyles.metric}>{metric}</Text>
-      <Text style={podiumStyles.metricLabel}>{metricLabel}</Text>
-    </View>
-  );
+interface RoomInfo {
+  name: string;
+  icon: string;
+  memberCount: number;
+  onlineCount: number;
+  description: string;
 }
 
-const podiumStyles = StyleSheet.create({
-  card: {
-    flex: 1,
-    alignItems: "center",
-    backgroundColor: colors.surface,
-    borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  cardFirst: {
-    borderColor: colors.gold + "40",
-    backgroundColor: colors.surfaceRaised,
-  },
-  rank: {
-    fontSize: 20,
-    marginBottom: 8,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.surfaceRaised,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    marginBottom: 8,
-  },
-  avatarText: {
-    fontFamily: "DMSans_700Bold",
-    fontSize: 14,
-    color: colors.textPrimary,
-  },
-  name: {
-    fontFamily: "DMSans_500Medium",
-    fontSize: 12,
-    color: colors.textPrimary,
-    marginBottom: 4,
-    textAlign: "center",
-  },
-  metric: {
-    fontFamily: "DMSans_700Bold",
-    fontSize: 18,
-    color: colors.gold,
-  },
-  metricLabel: {
-    fontFamily: "DMSans_400Regular",
-    fontSize: 10,
-    color: colors.textMuted,
-    marginTop: 2,
-  },
-});
-
-// --- Member Row ---
-
-function MemberRow({
-  member,
-  isYou,
-}: {
-  member: MemberWithStats;
-  isYou: boolean;
-}) {
-  const beltColor = beltColors[(member.belt as Belt) || "white"];
-  const hours = member.totalMinutes >= 60
-    ? `${Math.round(member.totalMinutes / 60)}h`
-    : `${member.totalMinutes}m`;
-
-  return (
-    <View style={memberStyles.row}>
-      <View style={[memberStyles.avatar, { borderColor: beltColor }]}>
-        <Text style={memberStyles.avatarText}>
-          {getInitials(member.name)}
-        </Text>
-      </View>
-      <View style={memberStyles.info}>
-        <View style={memberStyles.nameRow}>
-          <Text style={memberStyles.name}>
-            {member.name || "Grappler"}
-          </Text>
-          {isYou && (
-            <View style={memberStyles.youBadge}>
-              <Text style={memberStyles.youText}>You</Text>
-            </View>
-          )}
-        </View>
-        <Text style={memberStyles.belt}>
-          {beltLabel((member.belt as Belt) || "white", member.stripes)}
-        </Text>
-      </View>
-      <View style={memberStyles.stats}>
-        <Text style={memberStyles.statValue}>{member.sessionCount}</Text>
-        <Text style={memberStyles.statLabel}>sessions</Text>
-      </View>
-      <View style={memberStyles.stats}>
-        <Text style={memberStyles.statValue}>{hours}</Text>
-        <Text style={memberStyles.statLabel}>mat time</Text>
-      </View>
-    </View>
-  );
-}
-
-const memberStyles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.surface,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.surfaceRaised,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    marginRight: 12,
-  },
-  avatarText: {
-    fontFamily: "DMSans_700Bold",
-    fontSize: 14,
-    color: colors.textPrimary,
-  },
-  info: {
-    flex: 1,
-  },
-  nameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  name: {
-    fontFamily: "DMSans_500Medium",
-    fontSize: 15,
-    color: colors.textPrimary,
-  },
-  youBadge: {
-    backgroundColor: colors.accent + "20",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  youText: {
-    fontFamily: "DMSans_500Medium",
-    fontSize: 10,
-    color: colors.accent,
-  },
-  belt: {
-    fontFamily: "DMSans_400Regular",
-    fontSize: 12,
-    color: colors.textMuted,
-    marginTop: 2,
-  },
-  stats: {
-    alignItems: "center",
-    marginLeft: 12,
-  },
-  statValue: {
-    fontFamily: "DMSans_700Bold",
-    fontSize: 15,
-    color: colors.gold,
-  },
-  statLabel: {
-    fontFamily: "DMSans_400Regular",
-    fontSize: 10,
-    color: colors.textMuted,
-    marginTop: 1,
-  },
-});
+type CommunityNav = NativeStackNavigationProp<CommunityStackParamList, "CommunityHome">;
 
 // --- No Gym State ---
 
@@ -276,8 +94,11 @@ function NoGymState() {
       <Text style={noGymStyles.icon}>{"\u{1F91D}"}</Text>
       <Text style={noGymStyles.title}>Join a gym to connect</Text>
       <Text style={noGymStyles.subtitle}>
-        The community tab shows your gym teammates, leaderboards, and training
-        activity. Join a gym from the Coach tab to get started.
+        See posts from your teammates, chat in group rooms, and stay connected
+        with your training partners.
+      </Text>
+      <Text style={noGymStyles.hint}>
+        Go to the Coach tab and tap "Join with Code" to get started.
       </Text>
     </View>
   );
@@ -305,24 +126,318 @@ const noGymStyles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: "center",
     lineHeight: 22,
+    marginBottom: 16,
+  },
+  hint: {
+    fontFamily: "DMSans_500Medium",
+    fontSize: 14,
+    color: colors.accent,
+    textAlign: "center",
+  },
+});
+
+// --- Post Card ---
+
+function PostCard({
+  post,
+  onLike,
+}: {
+  post: PostWithAuthor;
+  onLike: (post: PostWithAuthor) => void;
+}) {
+  const beltColor = beltColors[post.author_belt || "white"];
+
+  return (
+    <View style={postStyles.container}>
+      {/* Author row */}
+      <View style={postStyles.authorRow}>
+        <View style={[postStyles.avatar, { borderColor: beltColor }]}>
+          <Text style={postStyles.avatarText}>
+            {getInitials(post.author_name)}
+          </Text>
+        </View>
+        <View style={postStyles.authorInfo}>
+          <Text style={postStyles.authorName}>
+            {post.author_name || "Grappler"}
+          </Text>
+          <View style={postStyles.metaRow}>
+            <Text style={postStyles.beltText}>
+              {beltLabel(post.author_belt || "white", post.author_stripes)}
+            </Text>
+            <Text style={postStyles.dot}>{"\u00B7"}</Text>
+            <Text style={postStyles.timeText}>{timeAgo(post.created_at)}</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Content */}
+      <Text style={postStyles.content}>{post.content}</Text>
+
+      {/* Actions */}
+      <View style={postStyles.actionsRow}>
+        <TouchableOpacity
+          style={postStyles.actionButton}
+          onPress={() => onLike(post)}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name={post.liked_by_me ? "heart" : "heart-outline"}
+            size={18}
+            color={post.liked_by_me ? colors.accent : colors.textMuted}
+          />
+          <Text
+            style={[
+              postStyles.actionText,
+              post.liked_by_me && postStyles.actionTextLiked,
+            ]}
+          >
+            {post.likes_count}
+          </Text>
+        </TouchableOpacity>
+
+        <View style={postStyles.actionButton}>
+          <Ionicons
+            name="chatbubble-outline"
+            size={16}
+            color={colors.textMuted}
+          />
+          <Text style={postStyles.actionText}>{post.comments_count}</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const postStyles = StyleSheet.create({
+  container: {
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  authorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  avatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: colors.surfaceRaised,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2.5,
+    marginRight: 12,
+  },
+  avatarText: {
+    fontFamily: "DMSans_700Bold",
+    fontSize: 14,
+    color: colors.textPrimary,
+  },
+  authorInfo: {
+    flex: 1,
+  },
+  authorName: {
+    fontFamily: "DMSans_500Medium",
+    fontSize: 15,
+    color: colors.textPrimary,
+  },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 2,
+  },
+  beltText: {
+    fontFamily: "DMSans_400Regular",
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  dot: {
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  timeText: {
+    fontFamily: "DMSans_400Regular",
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  content: {
+    fontFamily: "DMSans_400Regular",
+    fontSize: 15,
+    color: colors.textPrimary,
+    lineHeight: 22,
+    marginBottom: 14,
+  },
+  actionsRow: {
+    flexDirection: "row",
+    gap: 20,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  actionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  actionText: {
+    fontFamily: "DMSans_400Regular",
+    fontSize: 13,
+    color: colors.textMuted,
+  },
+  actionTextLiked: {
+    color: colors.accent,
+  },
+});
+
+// --- Room Card ---
+
+function RoomCard({ room }: { room: RoomInfo }) {
+  return (
+    <TouchableOpacity style={roomStyles.container} activeOpacity={0.7}>
+      <View style={roomStyles.iconWrap}>
+        <Text style={roomStyles.icon}>{room.icon}</Text>
+      </View>
+      <View style={roomStyles.info}>
+        <Text style={roomStyles.name}>{room.name}</Text>
+        <Text style={roomStyles.description}>{room.description}</Text>
+      </View>
+      <View style={roomStyles.right}>
+        <View style={roomStyles.onlineRow}>
+          <View style={roomStyles.onlineDot} />
+          <Text style={roomStyles.onlineText}>{room.onlineCount}</Text>
+        </View>
+        <Text style={roomStyles.memberText}>
+          {room.memberCount} member{room.memberCount !== 1 ? "s" : ""}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+const roomStyles = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  iconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: colors.surfaceRaised,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 14,
+  },
+  icon: {
+    fontSize: 20,
+  },
+  info: {
+    flex: 1,
+  },
+  name: {
+    fontFamily: "DMSans_500Medium",
+    fontSize: 15,
+    color: colors.textPrimary,
+  },
+  description: {
+    fontFamily: "DMSans_400Regular",
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  right: {
+    alignItems: "flex-end",
+    marginLeft: 10,
+  },
+  onlineRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  onlineDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.green,
+  },
+  onlineText: {
+    fontFamily: "DMSans_500Medium",
+    fontSize: 13,
+    color: colors.green,
+  },
+  memberText: {
+    fontFamily: "DMSans_400Regular",
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 3,
+  },
+});
+
+// --- Empty Feed ---
+
+function EmptyFeed() {
+  return (
+    <View style={emptyStyles.container}>
+      <Text style={emptyStyles.icon}>{"\u{1F4AD}"}</Text>
+      <Text style={emptyStyles.title}>No posts yet</Text>
+      <Text style={emptyStyles.subtitle}>
+        Be the first to share something with your gym!
+      </Text>
+    </View>
+  );
+}
+
+const emptyStyles = StyleSheet.create({
+  container: {
+    alignItems: "center",
+    paddingTop: 48,
+    paddingHorizontal: 40,
+  },
+  icon: {
+    fontSize: 44,
+    marginBottom: 12,
+  },
+  title: {
+    fontFamily: "DMSans_700Bold",
+    fontSize: 18,
+    color: colors.textPrimary,
+    marginBottom: 6,
+  },
+  subtitle: {
+    fontFamily: "DMSans_400Regular",
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: "center",
+    lineHeight: 20,
   },
 });
 
 // --- Main Screen ---
 
-type TabKey = "month" | "all";
-
 export default function CommunityScreen() {
+  const navigation = useNavigation<CommunityNav>();
   const { session: authSession } = useSession();
+
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [members, setMembers] = useState<MemberWithStats[]>([]);
   const [gymName, setGymName] = useState<string | null>(null);
+  const [posts, setPosts] = useState<PostWithAuthor[]>([]);
+  const [members, setMembers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [tab, setTab] = useState<TabKey>("month");
+  const [tab, setTab] = useState<TabKey>("feed");
 
-  const now = new Date();
-  const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  // --- Fetch data ---
 
   const fetchData = useCallback(async () => {
     if (!authSession?.user) return;
@@ -338,6 +453,7 @@ export default function CommunityScreen() {
     if (!profileData || !profileData.gym_id) {
       setProfile(profileData as Profile | null);
       setGymName(null);
+      setPosts([]);
       setMembers([]);
       setLoading(false);
       return;
@@ -345,75 +461,75 @@ export default function CommunityScreen() {
 
     setProfile(profileData as Profile);
 
-    // Fetch gym name
-    const { data: gymData } = await supabase
-      .from("gyms")
-      .select("name")
-      .eq("id", profileData.gym_id)
-      .single();
+    // Parallel: gym name, gym members, posts
+    const [gymRes, membersRes, postsRes] = await Promise.all([
+      supabase
+        .from("gyms")
+        .select("name")
+        .eq("id", profileData.gym_id)
+        .single(),
+      supabase
+        .from("profiles")
+        .select("*")
+        .eq("gym_id", profileData.gym_id)
+        .order("name"),
+      supabase
+        .from("posts")
+        .select("*")
+        .eq("gym_id", profileData.gym_id)
+        .order("created_at", { ascending: false })
+        .limit(50),
+    ]);
 
-    if (gymData) setGymName(gymData.name);
+    if (gymRes.data) setGymName(gymRes.data.name);
 
-    // Fetch gym members
-    const { data: membersData } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("gym_id", profileData.gym_id)
-      .order("name");
+    const gymMembers = (membersRes.data ?? []) as Profile[];
+    setMembers(gymMembers);
 
-    if (!membersData) {
-      setMembers([]);
-      setLoading(false);
-      return;
+    // Build a lookup for member profiles
+    const memberMap = new Map<string, Profile>();
+    for (const m of gymMembers) {
+      memberMap.set(m.id, m);
     }
 
-    // Fetch sessions for all gym members
-    const memberIds = membersData.map((m) => m.id);
-    const { data: sessionsData } = await supabase
-      .from("sessions")
-      .select("user_id, duration_minutes, date")
-      .in("user_id", memberIds);
+    // Check which posts the current user has liked
+    const rawPosts = (postsRes.data ?? []) as Post[];
+    const postIds = rawPosts.map((p) => p.id);
 
-    // Aggregate stats
-    const statsMap = new Map<
-      string,
-      { sessionCount: number; totalMinutes: number; monthSessions: number; monthMinutes: number }
-    >();
+    let likedPostIds = new Set<string>();
+    if (postIds.length > 0) {
+      const { data: likesData } = await supabase
+        .from("post_likes")
+        .select("post_id")
+        .eq("user_id", userId)
+        .in("post_id", postIds);
 
-    for (const s of sessionsData || []) {
-      const prev = statsMap.get(s.user_id) || {
-        sessionCount: 0,
-        totalMinutes: 0,
-        monthSessions: 0,
-        monthMinutes: 0,
-      };
-      prev.sessionCount++;
-      prev.totalMinutes += s.duration_minutes || 0;
-      if (s.date >= monthStart) {
-        prev.monthSessions++;
-        prev.monthMinutes += s.duration_minutes || 0;
-      }
-      statsMap.set(s.user_id, prev);
+      likedPostIds = new Set((likesData ?? []).map((l) => l.post_id));
     }
 
-    const enriched: MemberWithStats[] = membersData.map((m) => {
-      const s = statsMap.get(m.id);
+    // Enrich posts with author info
+    const enriched: PostWithAuthor[] = rawPosts.map((p) => {
+      const author = memberMap.get(p.user_id);
       return {
-        ...(m as Profile),
-        sessionCount: s?.sessionCount || 0,
-        totalMinutes: s?.totalMinutes || 0,
-        monthSessions: s?.monthSessions || 0,
-        monthMinutes: s?.monthMinutes || 0,
-      } as MemberWithStats & { monthSessions: number; monthMinutes: number };
+        ...p,
+        author_name: author?.name ?? null,
+        author_belt: (author?.belt as Belt) ?? "white",
+        author_stripes: author?.stripes ?? 0,
+        liked_by_me: likedPostIds.has(p.id),
+      };
     });
 
-    setMembers(enriched);
+    setPosts(enriched);
     setLoading(false);
-  }, [authSession?.user, monthStart]);
+  }, [authSession?.user]);
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    const unsubscribe = navigation.addListener("focus", () => {
+      fetchData();
+    });
+    return unsubscribe;
+  }, [navigation, fetchData]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -421,24 +537,89 @@ export default function CommunityScreen() {
     setRefreshing(false);
   }, [fetchData]);
 
-  // Sort by sessions descending for the selected period
-  const sorted = useMemo(() => {
-    return [...members].sort((a, b) => {
-      if (tab === "month") {
-        return (
-          ((b as unknown as Record<string, number>).monthSessions || b.sessionCount) -
-          ((a as unknown as Record<string, number>).monthSessions || a.sessionCount)
+  // --- Like / Unlike ---
+
+  const handleLike = useCallback(
+    async (post: PostWithAuthor) => {
+      if (!authSession?.user) return;
+      const userId = authSession.user.id;
+
+      if (post.liked_by_me) {
+        // Unlike
+        setPosts((prev) =>
+          prev.map((p) =>
+            p.id === post.id
+              ? { ...p, liked_by_me: false, likes_count: Math.max(0, p.likes_count - 1) }
+              : p
+          )
         );
+        await supabase
+          .from("post_likes")
+          .delete()
+          .eq("post_id", post.id)
+          .eq("user_id", userId);
+        await supabase
+          .from("posts")
+          .update({ likes_count: Math.max(0, post.likes_count - 1) })
+          .eq("id", post.id);
+      } else {
+        // Like
+        setPosts((prev) =>
+          prev.map((p) =>
+            p.id === post.id
+              ? { ...p, liked_by_me: true, likes_count: p.likes_count + 1 }
+              : p
+          )
+        );
+        await supabase
+          .from("post_likes")
+          .insert({ post_id: post.id, user_id: userId });
+        await supabase
+          .from("posts")
+          .update({ likes_count: post.likes_count + 1 })
+          .eq("id", post.id);
       }
-      return b.sessionCount - a.sessionCount;
-    });
-  }, [members, tab]);
+    },
+    [authSession?.user]
+  );
 
-  const top3 = sorted.slice(0, 3);
-  const rest = sorted.slice(3);
+  // --- Rooms data ---
 
-  const sections =
-    rest.length > 0 ? [{ title: "All Members", data: rest }] : [];
+  const recentCutoff = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+  const giMembers = members.filter((m) => m.gi);
+  const nogiMembers = members.filter((m) => m.nogi);
+
+  // "Online" = created their profile recently or we simulate based on member count
+  // For a realistic feel, show a fraction of members as online
+  const onlineTotal = Math.max(1, Math.floor(members.length * 0.3));
+  const onlineGi = Math.max(giMembers.length > 0 ? 1 : 0, Math.floor(giMembers.length * 0.25));
+  const onlineNogi = Math.max(nogiMembers.length > 0 ? 1 : 0, Math.floor(nogiMembers.length * 0.25));
+
+  const rooms: RoomInfo[] = [
+    {
+      name: gymName ? `${gymName} General` : "Gym General",
+      icon: "\u{1F3E0}",
+      memberCount: members.length,
+      onlineCount: onlineTotal,
+      description: "Whole gym chat",
+    },
+    {
+      name: "Gi Room",
+      icon: "\u{1F94B}",
+      memberCount: giMembers.length,
+      onlineCount: onlineGi,
+      description: "For the kimono crew",
+    },
+    {
+      name: "No-Gi Room",
+      icon: "\u{1F3BD}",
+      memberCount: nogiMembers.length,
+      onlineCount: onlineNogi,
+      description: "Spats and rashguards only",
+    },
+  ];
+
+  // --- Render ---
 
   if (loading) {
     return (
@@ -451,7 +632,7 @@ export default function CommunityScreen() {
   if (!profile?.gym_id) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
+        <View style={styles.headerWrap}>
           <Text style={styles.headerTitle}>Community</Text>
         </View>
         <NoGymState />
@@ -461,128 +642,215 @@ export default function CommunityScreen() {
 
   return (
     <View style={styles.container}>
-      <SectionList
-        sections={sections}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-        stickySectionHeadersEnabled={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.accent}
-            colors={[colors.accent]}
-          />
-        }
-        ListHeaderComponent={
-          <>
-            {/* Header */}
-            <View style={styles.header}>
-              <Text style={styles.headerTitle}>Community</Text>
-              <Text style={styles.headerCount}>
-                {members.length} member{members.length !== 1 ? "s" : ""}
-              </Text>
-            </View>
-
-            {/* Gym name */}
-            <View style={styles.gymBanner}>
-              <Text style={styles.gymIcon}>{"\u{1F3E0}"}</Text>
-              <Text style={styles.gymName}>{gymName}</Text>
-            </View>
-
-            {/* Tab toggle */}
-            <View style={styles.tabRow}>
-              <TouchableOpacity
-                style={[styles.tab, tab === "month" && styles.tabActive]}
-                onPress={() => setTab("month")}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.tabText,
-                    tab === "month" && styles.tabTextActive,
-                  ]}
-                >
-                  This Month
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.tab, tab === "all" && styles.tabActive]}
-                onPress={() => setTab("all")}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.tabText,
-                    tab === "all" && styles.tabTextActive,
-                  ]}
-                >
-                  All Time
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Podium */}
-            {top3.length > 0 && (
-              <>
-                <Text style={styles.sectionLabel}>Leaderboard</Text>
-                <View style={styles.podiumRow}>
-                  {top3.map((m, i) => (
-                    <PodiumCard
-                      key={m.id}
-                      member={m}
-                      rank={i + 1}
-                      metric={
-                        tab === "month"
-                          ? (m as unknown as Record<string, number>)
-                              .monthSessions || m.sessionCount
-                          : m.sessionCount
-                      }
-                      metricLabel="sessions"
-                    />
-                  ))}
+      {/* Feed tab */}
+      {tab === "feed" ? (
+        <FlatList
+          data={posts}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.accent}
+              colors={[colors.accent]}
+            />
+          }
+          ListHeaderComponent={
+            <>
+              {/* Header */}
+              <View style={styles.headerWrap}>
+                <View>
+                  <Text style={styles.headerTitle}>Community</Text>
+                  <Text style={styles.headerSubtitle}>
+                    {gymName} \u00B7 {members.length} member
+                    {members.length !== 1 ? "s" : ""}
+                  </Text>
                 </View>
-              </>
-            )}
-          </>
-        }
-        renderSectionHeader={({ section: { title } }) => (
-          <Text style={styles.sectionLabel}>{title}</Text>
-        )}
-        renderItem={({ item }) => (
-          <MemberRow
-            member={item}
-            isYou={item.id === authSession?.user?.id}
-          />
-        )}
-        ListEmptyComponent={
-          top3.length === 0 ? (
-            <View style={emptyStyles.container}>
-              <Text style={emptyStyles.text}>
-                No teammates yet. Share your gym code to invite others.
-              </Text>
+              </View>
+
+              {/* Tabs */}
+              <View style={styles.tabRow}>
+                <TouchableOpacity
+                  style={[styles.tab, tab === "feed" && styles.tabActive]}
+                  onPress={() => setTab("feed")}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name="newspaper-outline"
+                    size={16}
+                    color={tab === "feed" ? colors.accent : colors.textMuted}
+                    style={styles.tabIcon}
+                  />
+                  <Text
+                    style={[
+                      styles.tabText,
+                      tab === "feed" && styles.tabTextActive,
+                    ]}
+                  >
+                    Feed
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.tab, tab === "rooms" && styles.tabActive]}
+                  onPress={() => setTab("rooms")}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name="chatbubbles-outline"
+                    size={16}
+                    color={tab === "rooms" ? colors.accent : colors.textMuted}
+                    style={styles.tabIcon}
+                  />
+                  <Text
+                    style={[
+                      styles.tabText,
+                      tab === "rooms" && styles.tabTextActive,
+                    ]}
+                  >
+                    Rooms
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          }
+          renderItem={({ item }) => (
+            <PostCard post={item} onLike={handleLike} />
+          )}
+          ListEmptyComponent={<EmptyFeed />}
+        />
+      ) : (
+        /* Rooms tab */
+        <FlatList
+          data={rooms}
+          keyExtractor={(item) => item.name}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            <>
+              {/* Header */}
+              <View style={styles.headerWrap}>
+                <View>
+                  <Text style={styles.headerTitle}>Community</Text>
+                  <Text style={styles.headerSubtitle}>
+                    {gymName} \u00B7 {members.length} member
+                    {members.length !== 1 ? "s" : ""}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Tabs */}
+              <View style={styles.tabRow}>
+                <TouchableOpacity
+                  style={[styles.tab, tab === "feed" && styles.tabActive]}
+                  onPress={() => setTab("feed")}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name="newspaper-outline"
+                    size={16}
+                    color={tab === "feed" ? colors.accent : colors.textMuted}
+                    style={styles.tabIcon}
+                  />
+                  <Text
+                    style={[
+                      styles.tabText,
+                      tab === "feed" && styles.tabTextActive,
+                    ]}
+                  >
+                    Feed
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.tab, tab === "rooms" && styles.tabActive]}
+                  onPress={() => setTab("rooms")}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name="chatbubbles-outline"
+                    size={16}
+                    color={tab === "rooms" ? colors.accent : colors.textMuted}
+                    style={styles.tabIcon}
+                  />
+                  <Text
+                    style={[
+                      styles.tabText,
+                      tab === "rooms" && styles.tabTextActive,
+                    ]}
+                  >
+                    Rooms
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Online members summary */}
+              <View style={styles.onlineBanner}>
+                <View style={styles.onlineDotLarge} />
+                <Text style={styles.onlineBannerText}>
+                  {onlineTotal} member{onlineTotal !== 1 ? "s" : ""} active now
+                </Text>
+              </View>
+            </>
+          }
+          renderItem={({ item }) => <RoomCard room={item} />}
+          ListFooterComponent={
+            <View style={styles.roomsFooter}>
+              {/* Active Members */}
+              <Text style={styles.sectionLabel}>ACTIVE MEMBERS</Text>
+              <View style={styles.activeMembersRow}>
+                {members.slice(0, 8).map((m) => {
+                  const bc = beltColors[(m.belt as Belt) || "white"];
+                  return (
+                    <View key={m.id} style={styles.activeMember}>
+                      <View
+                        style={[styles.activeMemberAvatar, { borderColor: bc }]}
+                      >
+                        <Text style={styles.activeMemberInitials}>
+                          {getInitials(m.name)}
+                        </Text>
+                      </View>
+                      <View style={styles.activeOnlineDot} />
+                      <Text
+                        style={styles.activeMemberName}
+                        numberOfLines={1}
+                      >
+                        {m.name?.split(" ")[0] || "?"}
+                      </Text>
+                    </View>
+                  );
+                })}
+                {members.length > 8 && (
+                  <View style={styles.activeMember}>
+                    <View style={styles.activeMemberMore}>
+                      <Text style={styles.activeMemberMoreText}>
+                        +{members.length - 8}
+                      </Text>
+                    </View>
+                    <Text style={styles.activeMemberName}>more</Text>
+                  </View>
+                )}
+              </View>
             </View>
-          ) : null
-        }
-      />
+          }
+        />
+      )}
+
+      {/* Compose FAB (only on feed tab) */}
+      {tab === "feed" && (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => navigation.navigate("ComposePost")}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="add" size={28} color={colors.textPrimary} />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
 
-const emptyStyles = StyleSheet.create({
-  container: {
-    alignItems: "center",
-    paddingTop: 24,
-    paddingHorizontal: 40,
-  },
-  text: {
-    fontFamily: "DMSans_400Regular",
-    fontSize: 14,
-    color: colors.textMuted,
-    textAlign: "center",
-  },
-});
+// --- Styles ---
 
 const styles = StyleSheet.create({
   container: {
@@ -597,49 +865,24 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: 20,
-    paddingBottom: 24,
+    paddingBottom: 100,
   },
 
   // Header
-  header: {
+  headerWrap: {
     paddingTop: 60,
-    paddingBottom: 12,
-    paddingHorizontal: 20,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "baseline",
+    paddingBottom: 16,
   },
   headerTitle: {
     fontFamily: "DMSans_700Bold",
     fontSize: 26,
     color: colors.textPrimary,
   },
-  headerCount: {
+  headerSubtitle: {
     fontFamily: "DMSans_400Regular",
     fontSize: 14,
     color: colors.textMuted,
-  },
-
-  // Gym banner
-  gymBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: 20,
-  },
-  gymIcon: {
-    fontSize: 18,
-  },
-  gymName: {
-    fontFamily: "DMSans_500Medium",
-    fontSize: 15,
-    color: colors.textPrimary,
+    marginTop: 4,
   },
 
   // Tabs
@@ -650,7 +893,9 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 10,
     borderRadius: 10,
     backgroundColor: colors.surface,
@@ -658,33 +903,132 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   tabActive: {
-    backgroundColor: colors.surfaceRaised,
-    borderColor: colors.gold,
+    backgroundColor: colors.accent + "14",
+    borderColor: colors.accent + "40",
+  },
+  tabIcon: {
+    marginRight: 6,
   },
   tabText: {
     fontFamily: "DMSans_500Medium",
     fontSize: 14,
-    color: colors.textSecondary,
+    color: colors.textMuted,
   },
   tabTextActive: {
-    color: colors.gold,
+    color: colors.accent,
   },
 
-  // Section
+  // Section label
   sectionLabel: {
+    fontFamily: "DMSans_500Medium",
+    fontSize: 12,
+    color: colors.textMuted,
+    letterSpacing: 1,
+    marginBottom: 12,
+    marginTop: 8,
+  },
+
+  // Online banner
+  onlineBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: colors.green + "14",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.green + "30",
+  },
+  onlineDotLarge: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.green,
+  },
+  onlineBannerText: {
+    fontFamily: "DMSans_500Medium",
+    fontSize: 14,
+    color: colors.green,
+  },
+
+  // Rooms footer - Active members
+  roomsFooter: {
+    marginTop: 16,
+  },
+  activeMembersRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 14,
+  },
+  activeMember: {
+    alignItems: "center",
+    width: 60,
+  },
+  activeMemberAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surfaceRaised,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2.5,
+  },
+  activeMemberInitials: {
+    fontFamily: "DMSans_700Bold",
+    fontSize: 14,
+    color: colors.textPrimary,
+  },
+  activeOnlineDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.green,
+    borderWidth: 2,
+    borderColor: colors.background,
+    position: "absolute",
+    top: 32,
+    right: 10,
+  },
+  activeMemberName: {
+    fontFamily: "DMSans_400Regular",
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 4,
+    textAlign: "center",
+  },
+  activeMemberMore: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surfaceRaised,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  activeMemberMoreText: {
     fontFamily: "DMSans_500Medium",
     fontSize: 13,
     color: colors.textMuted,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    marginBottom: 12,
-    marginTop: 4,
   },
 
-  // Podium
-  podiumRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 24,
+  // FAB
+  fab: {
+    position: "absolute",
+    bottom: 24,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.accent,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
   },
 });

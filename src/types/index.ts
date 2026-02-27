@@ -86,3 +86,20 @@ export interface TechniqueNote {
   notes: string | null;
   updated_at: string;
 }
+
+export interface Post {
+  id: string;
+  user_id: string;
+  gym_id: string;
+  content: string;
+  likes_count: number;
+  comments_count: number;
+  created_at: string;
+}
+
+export interface PostWithAuthor extends Post {
+  author_name: string | null;
+  author_belt: Belt;
+  author_stripes: number;
+  liked_by_me: boolean;
+}
