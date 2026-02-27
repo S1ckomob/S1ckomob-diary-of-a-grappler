@@ -33,6 +33,7 @@ const DIFFICULTY_COLORS: Record<Difficulty, string> = {
 
 const CATEGORY_ICONS: Record<string, string> = {
   Guard: "\u{1F6E1}\u{FE0F}",
+  Passes: "\u{1F3C3}",
   Passing: "\u{1F3C3}",
   Submissions: "\u{1F4A5}",
   Takedowns: "\u{1F93C}",
@@ -48,6 +49,13 @@ function categoryIcon(category: string): string {
 
 function difficultyLabel(d: Difficulty): string {
   return d.charAt(0).toUpperCase() + d.slice(1);
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 // --- Types ---
@@ -125,7 +133,7 @@ export default function TechniqueDetailScreen({ navigation, route }: Props) {
             <View
               style={[
                 styles.diffBadge,
-                { backgroundColor: diffColor + "20" },
+                { backgroundColor: hexToRgba(diffColor, 0.15) },
               ]}
             >
               <Text style={[styles.diffText, { color: diffColor }]}>

@@ -34,6 +34,7 @@ const colors = {
 
 const CATEGORY_ICONS: Record<string, string> = {
   Guard: "\u{1F6E1}\u{FE0F}",
+  Passes: "\u{1F3C3}",
   Passing: "\u{1F3C3}",
   Submissions: "\u{1F4A5}",
   Takedowns: "\u{1F93C}",
@@ -55,6 +56,13 @@ const DIFFICULTY_COLORS: Record<Difficulty, string> = {
 
 function difficultyLabel(d: Difficulty): string {
   return d.charAt(0).toUpperCase() + d.slice(1);
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 type TechniquesNav = NativeStackNavigationProp<
@@ -141,7 +149,7 @@ function TechniqueCard({
             </Text>
           </View>
         )}
-        <View style={[cardStyles.diffBadge, { backgroundColor: diffColor + "25" }]}>
+        <View style={[cardStyles.diffBadge, { backgroundColor: hexToRgba(diffColor, 0.15) }]}>
           <View style={[cardStyles.diffDot, { backgroundColor: diffColor }]} />
           <Text style={[cardStyles.diffText, { color: diffColor }]}>
             {difficultyLabel(technique.difficulty)}
