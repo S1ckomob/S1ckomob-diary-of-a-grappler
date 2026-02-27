@@ -438,17 +438,6 @@ export default function JournalScreen() {
               <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
             </TouchableOpacity>
 
-            {/* Competitions */}
-            <TouchableOpacity
-              style={styles.progressButton}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate("Competitions")}
-            >
-              <Ionicons name="trophy-outline" size={18} color={colors.gold} />
-              <Text style={styles.progressButtonText}>Competitions</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-            </TouchableOpacity>
-
             {/* Section label */}
             {sessions.length > 0 && (
               <Text style={styles.sectionLabel}>Recent Sessions</Text>

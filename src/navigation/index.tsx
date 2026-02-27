@@ -23,9 +23,10 @@ import AddGoalScreen from "../screens/AddGoalScreen";
 import ProgressScreen from "../screens/ProgressScreen";
 import CompetitionsScreen from "../screens/CompetitionsScreen";
 import AddCompetitionScreen from "../screens/AddCompetitionScreen";
+import EditCompetitionScreen from "../screens/EditCompetitionScreen";
 import CommunityScreen from "../screens/CommunityScreen";
 import ComposePostScreen from "../screens/ComposePostScreen";
-import type { Technique } from "../types";
+import type { Technique, Competition } from "../types";
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -37,8 +38,6 @@ export type JournalStackParamList = {
   JournalHome: undefined;
   LogSession: undefined;
   Progress: undefined;
-  Competitions: undefined;
-  AddCompetition: undefined;
 };
 
 export type ProfileStackParamList = {
@@ -49,6 +48,12 @@ export type ProfileStackParamList = {
 export type TechniquesStackParamList = {
   TechniquesHome: undefined;
   TechniqueDetail: { technique: Technique };
+};
+
+export type CompeteStackParamList = {
+  CompeteHome: undefined;
+  AddCompetition: undefined;
+  EditCompetition: { competition: Competition };
 };
 
 export type CommunityStackParamList = {
@@ -70,6 +75,7 @@ const AuthStack_ = createNativeStackNavigator<AuthStackParamList>();
 const JournalStack = createNativeStackNavigator<JournalStackParamList>();
 const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
 const TechniquesStack_ = createNativeStackNavigator<TechniquesStackParamList>();
+const CompeteStack_ = createNativeStackNavigator<CompeteStackParamList>();
 const CommunityStack_ = createNativeStackNavigator<CommunityStackParamList>();
 const CoachStack_ = createNativeStackNavigator<CoachStackParamList>();
 
@@ -83,12 +89,6 @@ function JournalStackScreen() {
         options={{ presentation: "modal", animation: "slide_from_bottom" }}
       />
       <JournalStack.Screen name="Progress" component={ProgressScreen} />
-      <JournalStack.Screen name="Competitions" component={CompetitionsScreen} />
-      <JournalStack.Screen
-        name="AddCompetition"
-        component={AddCompetitionScreen}
-        options={{ presentation: "modal", animation: "slide_from_bottom" }}
-      />
     </JournalStack.Navigator>
   );
 }
@@ -105,6 +105,24 @@ function TechniquesStackScreen() {
         component={TechniqueDetailScreen}
       />
     </TechniquesStack_.Navigator>
+  );
+}
+
+function CompeteStackScreen() {
+  return (
+    <CompeteStack_.Navigator screenOptions={{ headerShown: false }}>
+      <CompeteStack_.Screen name="CompeteHome" component={CompetitionsScreen} />
+      <CompeteStack_.Screen
+        name="AddCompetition"
+        component={AddCompetitionScreen}
+        options={{ presentation: "modal", animation: "slide_from_bottom" }}
+      />
+      <CompeteStack_.Screen
+        name="EditCompetition"
+        component={EditCompetitionScreen}
+        options={{ presentation: "modal", animation: "slide_from_bottom" }}
+      />
+    </CompeteStack_.Navigator>
   );
 }
 
@@ -189,6 +207,15 @@ function MainTabs() {
         }}
       />
       <Tab.Screen
+        name="Compete"
+        component={CompeteStackScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="trophy-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
         name="Coach"
         component={CoachStackScreen}
         options={{
@@ -242,8 +269,6 @@ const linking: any = {
           JournalHome: "",
           LogSession: "log-session",
           Progress: "progress",
-          Competitions: "competitions",
-          AddCompetition: "add-competition",
         },
       },
       Techniques: {
@@ -251,6 +276,14 @@ const linking: any = {
         screens: {
           TechniquesHome: "techniques",
           TechniqueDetail: "technique",
+        },
+      },
+      Compete: {
+        initialRouteName: "CompeteHome" as const,
+        screens: {
+          CompeteHome: "compete",
+          AddCompetition: "add-competition",
+          EditCompetition: "edit-competition",
         },
       },
       Coach: {

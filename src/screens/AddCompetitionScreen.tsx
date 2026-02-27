@@ -125,6 +125,7 @@ export default function AddCompetitionScreen() {
             value={name}
             onChangeText={setName}
             maxLength={100}
+            autoComplete="off"
           />
 
           {/* Date */}
@@ -136,7 +137,7 @@ export default function AddCompetitionScreen() {
             value={date}
             onChangeText={setDate}
             maxLength={10}
-            keyboardType="numbers-and-punctuation"
+            autoComplete="off"
           />
 
           {/* Location */}
@@ -148,6 +149,7 @@ export default function AddCompetitionScreen() {
             value={location}
             onChangeText={setLocation}
             maxLength={100}
+            autoComplete="off"
           />
 
           {/* Division */}
