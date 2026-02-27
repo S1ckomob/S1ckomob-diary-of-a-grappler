@@ -23,6 +23,7 @@ const colors = {
   surfaceRaised: "#1A1A26",
   accent: "#C41E3A",
   gold: "#C9A84C",
+  green: "#2D8E4E",
   textPrimary: "#FFFFFF",
   textSecondary: "#9A9AA0",
   textMuted: "#5A5A64",
@@ -55,26 +56,46 @@ function beltLabel(belt: Belt): string {
   return belt.charAt(0).toUpperCase() + belt.slice(1) + " Belt";
 }
 
-function stripesLabel(stripes: number): string {
-  if (stripes === 0) return "No stripes";
-  if (stripes === 1) return "1 stripe";
-  return `${stripes} stripes`;
+function calculateStreak(sessions: { date: string }[]): number {
+  if (sessions.length === 0) return 0;
+
+  const uniqueDates = [
+    ...new Set(sessions.map((s) => s.date)),
+  ].sort((a, b) => (a > b ? -1 : 1));
+
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const yesterdayDate = new Date(now);
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterdayStr = `${yesterdayDate.getFullYear()}-${String(yesterdayDate.getMonth() + 1).padStart(2, "0")}-${String(yesterdayDate.getDate()).padStart(2, "0")}`;
+
+  if (uniqueDates[0] !== todayStr && uniqueDates[0] !== yesterdayStr) return 0;
+
+  let streak = 1;
+  for (let i = 1; i < uniqueDates.length; i++) {
+    const current = new Date(uniqueDates[i - 1] + "T00:00:00");
+    const prev = new Date(uniqueDates[i] + "T00:00:00");
+    const diffMs = current.getTime() - prev.getTime();
+    const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays === 1) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+
+  return streak;
 }
 
-function formatMemberSince(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+function dnaBarColor(value: number): string {
+  if (value >= 70) return colors.green;
+  if (value >= 40) return colors.gold;
+  return colors.accent;
 }
 
 // --- Stat Card ---
 
-function StatCard({
-  value,
-  label,
-}: {
-  value: string;
-  label: string;
-}) {
+function StatCard({ value, label }: { value: string; label: string }) {
   return (
     <View style={statStyles.card}>
       <Text style={statStyles.value}>{value}</Text>
@@ -106,35 +127,56 @@ const statStyles = StyleSheet.create({
   },
 });
 
-// --- Info Row ---
+// --- DNA Bar ---
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function DnaBar({ label, value }: { label: string; value: number }) {
+  const barColor = dnaBarColor(value);
   return (
-    <View style={infoStyles.row}>
-      <Text style={infoStyles.label}>{label}</Text>
-      <Text style={infoStyles.value}>{value}</Text>
+    <View style={dnaStyles.row}>
+      <View style={dnaStyles.labelRow}>
+        <Text style={dnaStyles.label}>{label}</Text>
+        <Text style={[dnaStyles.value, { color: barColor }]}>{value}</Text>
+      </View>
+      <View style={dnaStyles.track}>
+        <View
+          style={[
+            dnaStyles.fill,
+            { width: `${Math.min(value, 100)}%`, backgroundColor: barColor },
+          ]}
+        />
+      </View>
     </View>
   );
 }
 
-const infoStyles = StyleSheet.create({
+const dnaStyles = StyleSheet.create({
   row: {
+    marginBottom: 14,
+  },
+  labelRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    marginBottom: 6,
   },
   label: {
-    fontFamily: "DMSans_400Regular",
+    fontFamily: "DMSans_500Medium",
     fontSize: 14,
     color: colors.textSecondary,
   },
   value: {
-    fontFamily: "DMSans_500Medium",
+    fontFamily: "DMSans_700Bold",
     fontSize: 14,
-    color: colors.textPrimary,
+  },
+  track: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.surfaceRaised,
+    overflow: "hidden",
+  },
+  fill: {
+    height: 8,
+    borderRadius: 4,
   },
 });
 
@@ -145,17 +187,18 @@ type ProfileNav = NativeStackNavigationProp<ProfileStackParamList, "ProfileHome"
 interface SessionStats {
   totalSessions: number;
   totalMinutes: number;
-  totalSubs: number;
+  streak: number;
 }
 
 export default function ProfileScreen() {
   const navigation = useNavigation<ProfileNav>();
   const { session: authSession } = useSession();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [gymName, setGymName] = useState<string | null>(null);
   const [stats, setStats] = useState<SessionStats>({
     totalSessions: 0,
     totalMinutes: 0,
-    totalSubs: 0,
+    streak: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -167,11 +210,25 @@ export default function ProfileScreen() {
       supabase.from("profiles").select("*").eq("id", userId).single(),
       supabase
         .from("sessions")
-        .select("duration_minutes, taps_given")
+        .select("duration_minutes, date")
         .eq("user_id", userId),
     ]);
 
-    if (profileRes.data) setProfile(profileRes.data as Profile);
+    if (profileRes.data) {
+      const p = profileRes.data as Profile;
+      setProfile(p);
+
+      if (p.gym_id) {
+        const { data: gym } = await supabase
+          .from("gyms")
+          .select("name")
+          .eq("id", p.gym_id)
+          .single();
+        setGymName(gym?.name ?? null);
+      } else {
+        setGymName(null);
+      }
+    }
 
     if (sessionsRes.data) {
       const sessions = sessionsRes.data;
@@ -181,7 +238,7 @@ export default function ProfileScreen() {
           (sum, s) => sum + (s.duration_minutes || 0),
           0
         ),
-        totalSubs: sessions.reduce((sum, s) => sum + (s.taps_given || 0), 0),
+        streak: calculateStreak(sessions),
       });
     }
 
@@ -211,6 +268,7 @@ export default function ProfileScreen() {
   const displayName = profile?.name || email.split("@")[0] || "Grappler";
   const belt = (profile?.belt as Belt) || "white";
   const beltColor = beltColors[belt] || beltColors.white;
+  const stripes = Math.min(profile?.stripes || 0, 4);
 
   const totalHours = Math.round(stats.totalMinutes / 60);
   const hoursDisplay =
@@ -237,7 +295,7 @@ export default function ProfileScreen() {
           <Text style={styles.headerTitle}>Profile</Text>
         </View>
 
-        {/* Avatar + Name */}
+        {/* Avatar + Name + Belt */}
         <View style={styles.avatarSection}>
           <View style={[styles.avatar, { borderColor: beltColor }]}>
             <Text style={styles.avatarText}>
@@ -245,81 +303,59 @@ export default function ProfileScreen() {
             </Text>
           </View>
           <Text style={styles.name}>{displayName}</Text>
-          <Text style={styles.email}>{email}</Text>
 
-          {/* Belt badge */}
+          {/* Belt badge with visual stripes */}
           <View style={styles.beltRow}>
             <View style={[styles.beltDot, { backgroundColor: beltColor }]} />
-            <Text style={styles.beltText}>
-              {beltLabel(belt)}
-              {profile?.stripes ? ` \u00B7 ${stripesLabel(profile.stripes)}` : ""}
-            </Text>
+            <Text style={styles.beltText}>{beltLabel(belt)}</Text>
+            {stripes > 0 && (
+              <View style={styles.stripesRow}>
+                {Array.from({ length: stripes }).map((_, i) => (
+                  <View
+                    key={i}
+                    style={[styles.stripeTick, { backgroundColor: beltColor }]}
+                  />
+                ))}
+              </View>
+            )}
           </View>
+
+          {/* Gym name */}
+          {gymName && <Text style={styles.gymName}>{gymName}</Text>}
         </View>
 
         {/* Stats */}
         <View style={styles.statsRow}>
           <StatCard value={String(stats.totalSessions)} label="Sessions" />
           <StatCard value={hoursDisplay} label="Mat Time" />
-          <StatCard value={String(stats.totalSubs)} label="Subs" />
+          <StatCard
+            value={String(stats.streak)}
+            label={stats.streak === 1 ? "Day Streak" : "Day Streak"}
+          />
         </View>
 
-        {/* Profile Info */}
+        {/* Your Game - DNA Bars */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionLabel}>Details</Text>
-            <TouchableOpacity
-              onPress={() => navigation.navigate("EditProfile")}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Text style={styles.editButton}>Edit</Text>
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.sectionLabel}>Your Game</Text>
           <View style={styles.infoCard}>
-            <InfoRow label="Name" value={profile?.name || "Not set"} />
-            <InfoRow label="Weight Class" value={profile?.weight_class || "Not set"} />
-            <InfoRow
-              label="Training"
-              value={
-                profile?.gi && profile?.nogi
-                  ? "Gi & No-Gi"
-                  : profile?.gi
-                    ? "Gi"
-                    : profile?.nogi
-                      ? "No-Gi"
-                      : "Not set"
-              }
-            />
-            <InfoRow
-              label="Units"
-              value={profile?.unit_system === "imperial" ? "Imperial" : "Metric"}
-            />
-            <View style={infoStyles.row}>
-              <Text style={infoStyles.label}>Goals</Text>
-              <Text
-                style={[infoStyles.value, { flex: 1, textAlign: "right" }]}
-                numberOfLines={1}
-              >
-                {profile?.training_goals || "Not set"}
-              </Text>
+            <View style={{ paddingVertical: 14 }}>
+              <DnaBar label="Guard" value={profile?.dna_guard ?? 0} />
+              <DnaBar label="Passing" value={profile?.dna_passing ?? 0} />
+              <DnaBar label="Submissions" value={profile?.dna_submissions ?? 0} />
+              <DnaBar label="Takedowns" value={profile?.dna_takedowns ?? 0} />
+              <DnaBar label="Escapes" value={profile?.dna_escapes ?? 0} />
             </View>
           </View>
         </View>
 
-        {/* Member Since */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Account</Text>
-          <View style={styles.infoCard}>
-            <InfoRow
-              label="Member since"
-              value={
-                profile?.created_at
-                  ? formatMemberSince(profile.created_at)
-                  : "--"
-              }
-            />
-          </View>
-        </View>
+        {/* Edit Profile */}
+        <TouchableOpacity
+          style={styles.editProfileButton}
+          onPress={() => navigation.navigate("EditProfile")}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.editProfileText}>Edit Profile</Text>
+        </TouchableOpacity>
 
         {/* Sign Out */}
         <TouchableOpacity
@@ -387,12 +423,6 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: colors.textPrimary,
   },
-  email: {
-    fontFamily: "DMSans_400Regular",
-    fontSize: 14,
-    color: colors.textMuted,
-    marginTop: 4,
-  },
   beltRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -409,6 +439,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
   },
+  stripesRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    marginLeft: 4,
+  },
+  stripeTick: {
+    width: 4,
+    height: 14,
+    borderRadius: 1,
+  },
+  gymName: {
+    fontFamily: "DMSans_500Medium",
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginTop: 8,
+  },
 
   // Stats
   statsRow: {
@@ -421,24 +468,12 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 24,
   },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
-  },
   sectionLabel: {
     fontFamily: "DMSans_500Medium",
     fontSize: 13,
     color: colors.textMuted,
     textTransform: "uppercase",
     letterSpacing: 1,
-    marginBottom: 10,
-  },
-  editButton: {
-    fontFamily: "DMSans_500Medium",
-    fontSize: 14,
-    color: colors.accent,
     marginBottom: 10,
   },
   infoCard: {
@@ -449,6 +484,22 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
 
+  // Edit Profile
+  editProfileButton: {
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 12,
+  },
+  editProfileText: {
+    fontFamily: "DMSans_500Medium",
+    fontSize: 16,
+    color: colors.textPrimary,
+  },
+
   // Sign out
   signOutButton: {
     borderRadius: 14,
@@ -456,7 +507,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: colors.accent,
-    marginTop: 8,
   },
   signOutText: {
     fontFamily: "DMSans_500Medium",

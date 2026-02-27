@@ -193,6 +193,47 @@ function AuthStack() {
   );
 }
 
+// --- Linking (web URL mapping) ---
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const linking: any = {
+  prefixes: [],
+  config: {
+    screens: {
+      Journal: {
+        initialRouteName: "JournalHome" as const,
+        screens: {
+          JournalHome: "",
+          LogSession: "log-session",
+        },
+      },
+      Techniques: {
+        initialRouteName: "TechniquesHome" as const,
+        screens: {
+          TechniquesHome: "techniques",
+          TechniqueDetail: "technique",
+        },
+      },
+      Coach: {
+        initialRouteName: "CoachHome" as const,
+        screens: {
+          CoachHome: "coach",
+          JoinGym: "join-gym",
+          AddGoal: "add-goal",
+        },
+      },
+      Community: "community",
+      Profile: {
+        initialRouteName: "ProfileHome" as const,
+        screens: {
+          ProfileHome: "profile",
+          EditProfile: "edit-profile",
+        },
+      },
+    },
+  },
+};
+
 // --- Root ---
 
 export default function Navigation() {
@@ -210,7 +251,7 @@ export default function Navigation() {
   const needsOnboarding = session && (!profile || profile.name === null);
 
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       {!session ? (
         <AuthStack />
       ) : needsOnboarding ? (

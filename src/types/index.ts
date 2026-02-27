@@ -17,6 +17,7 @@ export interface Profile {
   nogi: boolean;
   unit_system: string;
   training_goals: string | null;
+  bio: string | null;
   created_at: string;
 }
 

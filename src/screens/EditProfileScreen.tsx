@@ -221,8 +221,7 @@ export default function EditProfileScreen({ navigation }: Props) {
   const [weightClass, setWeightClass] = useState<string | null>(null);
   const [gi, setGi] = useState(true);
   const [nogi, setNogi] = useState(true);
-  const [unitSystem, setUnitSystem] = useState("metric");
-  const [trainingGoals, setTrainingGoals] = useState("");
+  const [bio, setBio] = useState("");
 
   const fetchProfile = useCallback(async () => {
     if (!authSession?.user) return;
@@ -241,8 +240,7 @@ export default function EditProfileScreen({ navigation }: Props) {
       setWeightClass(p.weight_class);
       setGi(p.gi);
       setNogi(p.nogi);
-      setUnitSystem(p.unit_system);
-      setTrainingGoals(p.training_goals || "");
+      setBio(p.bio || "");
     }
 
     setLoading(false);
@@ -265,8 +263,7 @@ export default function EditProfileScreen({ navigation }: Props) {
         weight_class: weightClass,
         gi,
         nogi,
-        unit_system: unitSystem,
-        training_goals: trainingGoals.trim() || null,
+        bio: bio.trim() || null,
       })
       .eq("id", authSession.user.id);
 
@@ -323,6 +320,19 @@ export default function EditProfileScreen({ navigation }: Props) {
             autoCapitalize="words"
           />
 
+          {/* Bio */}
+          <Text style={styles.fieldLabel}>Bio</Text>
+          <TextInput
+            style={styles.textAreaInput}
+            placeholder="Tell us about your jiu-jitsu journey"
+            placeholderTextColor={colors.textMuted}
+            multiline
+            textAlignVertical="top"
+            value={bio}
+            onChangeText={setBio}
+            maxLength={300}
+          />
+
           {/* Belt */}
           <Text style={styles.fieldLabel}>Belt</Text>
           <ChipSelector
@@ -352,7 +362,7 @@ export default function EditProfileScreen({ navigation }: Props) {
           />
 
           {/* Training Preferences */}
-          <Text style={styles.fieldLabel}>Training Preferences</Text>
+          <Text style={styles.fieldLabel}>Training Style</Text>
           <View style={styles.toggleCard}>
             <ToggleRow label="Gi" value={gi} onToggle={() => setGi(!gi)} />
             <ToggleRow
@@ -361,30 +371,6 @@ export default function EditProfileScreen({ navigation }: Props) {
               onToggle={() => setNogi(!nogi)}
             />
           </View>
-
-          {/* Units */}
-          <Text style={styles.fieldLabel}>Unit System</Text>
-          <ChipSelector
-            options={["metric", "imperial"]}
-            selected={unitSystem}
-            onSelect={setUnitSystem}
-            renderLabel={(val) =>
-              val === "metric" ? "Metric (kg)" : "Imperial (lbs)"
-            }
-          />
-
-          {/* Training Goals */}
-          <Text style={styles.fieldLabel}>Training Goals</Text>
-          <TextInput
-            style={styles.textAreaInput}
-            placeholder="What are you working towards?"
-            placeholderTextColor={colors.textMuted}
-            multiline
-            textAlignVertical="top"
-            value={trainingGoals}
-            onChangeText={setTrainingGoals}
-            maxLength={500}
-          />
 
           {/* Save */}
           <TouchableOpacity
@@ -479,7 +465,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     minHeight: 100,
     lineHeight: 22,
-    marginBottom: 32,
+    marginBottom: 24,
   },
   toggleCard: {
     backgroundColor: colors.surface,
