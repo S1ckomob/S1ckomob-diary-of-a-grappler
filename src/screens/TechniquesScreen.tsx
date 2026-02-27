@@ -126,27 +126,33 @@ function TechniqueCard({
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={cardStyles.header}>
-        <Text style={cardStyles.icon}>
-          {categoryIcon(technique.category)}
-        </Text>
-        <View style={cardStyles.headerText}>
-          <Text style={cardStyles.name}>{technique.name}</Text>
-          {technique.subcategory && (
-            <Text style={cardStyles.subcategory}>{technique.subcategory}</Text>
-          )}
+      <Text style={cardStyles.name}>{technique.name}</Text>
+      <View style={cardStyles.badges}>
+        <View style={cardStyles.categoryBadge}>
+          <Text style={cardStyles.categoryIcon}>
+            {categoryIcon(technique.category)}
+          </Text>
+          <Text style={cardStyles.categoryText}>{technique.category}</Text>
         </View>
-        <View style={[cardStyles.diffBadge, { backgroundColor: diffColor + "20" }]}>
+        {technique.subcategory && (
+          <View style={cardStyles.subcategoryBadge}>
+            <Text style={cardStyles.subcategoryText}>
+              {technique.subcategory}
+            </Text>
+          </View>
+        )}
+        <View style={[cardStyles.diffBadge, { backgroundColor: diffColor + "25" }]}>
+          <View style={[cardStyles.diffDot, { backgroundColor: diffColor }]} />
           <Text style={[cardStyles.diffText, { color: diffColor }]}>
             {difficultyLabel(technique.difficulty)}
           </Text>
         </View>
       </View>
-      {technique.description && (
+      {technique.description ? (
         <Text style={cardStyles.description} numberOfLines={2}>
           {technique.description}
         </Text>
-      )}
+      ) : null}
     </TouchableOpacity>
   );
 }
@@ -160,36 +166,62 @@ const cardStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  header: {
+  name: {
+    fontFamily: "DMSans_700Bold",
+    fontSize: 16,
+    color: colors.textPrimary,
+    marginBottom: 10,
+  },
+  badges: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 8,
+  },
+  categoryBadge: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 4,
+    backgroundColor: colors.surfaceRaised,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
   },
-  icon: {
-    fontSize: 20,
-    marginRight: 12,
+  categoryIcon: {
+    fontSize: 12,
   },
-  headerText: {
-    flex: 1,
-  },
-  name: {
+  categoryText: {
     fontFamily: "DMSans_500Medium",
-    fontSize: 15,
-    color: colors.textPrimary,
+    fontSize: 12,
+    color: colors.textSecondary,
   },
-  subcategory: {
+  subcategoryBadge: {
+    backgroundColor: colors.surfaceRaised,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  subcategoryText: {
     fontFamily: "DMSans_400Regular",
     fontSize: 12,
     color: colors.textMuted,
-    marginTop: 2,
   },
   diffBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 8,
+  },
+  diffDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   diffText: {
     fontFamily: "DMSans_500Medium",
-    fontSize: 11,
+    fontSize: 12,
   },
   description: {
     fontFamily: "DMSans_400Regular",
