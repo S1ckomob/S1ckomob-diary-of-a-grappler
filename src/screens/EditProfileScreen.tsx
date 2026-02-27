@@ -25,6 +25,7 @@ const colors = {
   surfaceRaised: "#1A1A26",
   accent: "#C41E3A",
   gold: "#C9A84C",
+  green: "#2D8E4E",
   textPrimary: "#FFFFFF",
   textSecondary: "#9A9AA0",
   textMuted: "#5A5A64",
@@ -55,6 +56,14 @@ const WEIGHT_CLASSES = [
   "Heavy",
   "Super Heavy",
   "Ultra Heavy",
+];
+
+const DNA_FIELDS: { key: string; label: string }[] = [
+  { key: "dna_guard", label: "Guard" },
+  { key: "dna_passing", label: "Passing" },
+  { key: "dna_submissions", label: "Submissions" },
+  { key: "dna_takedowns", label: "Takedowns" },
+  { key: "dna_escapes", label: "Escapes" },
 ];
 
 // --- Chip Selector ---
@@ -208,6 +217,115 @@ const toggleStyles = StyleSheet.create({
   },
 });
 
+// --- DNA Slider ---
+
+function dnaBarColor(value: number): string {
+  if (value >= 70) return colors.green;
+  if (value >= 40) return colors.gold;
+  return colors.accent;
+}
+
+function DnaSlider({
+  label,
+  value,
+  onDecrease,
+  onIncrease,
+}: {
+  label: string;
+  value: number;
+  onDecrease: () => void;
+  onIncrease: () => void;
+}) {
+  const barColor = dnaBarColor(value);
+  return (
+    <View style={dnaStyles.container}>
+      <View style={dnaStyles.labelRow}>
+        <Text style={dnaStyles.label}>{label}</Text>
+        <Text style={[dnaStyles.value, { color: barColor }]}>{value}</Text>
+      </View>
+      <View style={dnaStyles.sliderRow}>
+        <TouchableOpacity
+          style={dnaStyles.button}
+          onPress={onDecrease}
+          activeOpacity={0.7}
+        >
+          <Text style={dnaStyles.buttonText}>-</Text>
+        </TouchableOpacity>
+        <View style={dnaStyles.track}>
+          <View
+            style={[
+              dnaStyles.fill,
+              {
+                width: `${Math.min(value, 100)}%`,
+                backgroundColor: barColor,
+              },
+            ]}
+          />
+        </View>
+        <TouchableOpacity
+          style={dnaStyles.button}
+          onPress={onIncrease}
+          activeOpacity={0.7}
+        >
+          <Text style={dnaStyles.buttonText}>+</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const dnaStyles = StyleSheet.create({
+  container: {
+    marginBottom: 16,
+  },
+  labelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  label: {
+    fontFamily: "DMSans_500Medium",
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  value: {
+    fontFamily: "DMSans_700Bold",
+    fontSize: 14,
+  },
+  sliderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  button: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: colors.surfaceRaised,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  buttonText: {
+    fontFamily: "DMSans_700Bold",
+    fontSize: 18,
+    color: colors.textPrimary,
+  },
+  track: {
+    flex: 1,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.surfaceRaised,
+    overflow: "hidden",
+  },
+  fill: {
+    height: 8,
+    borderRadius: 4,
+  },
+});
+
 // --- Main Screen ---
 
 export default function EditProfileScreen({ navigation }: Props) {
@@ -222,6 +340,12 @@ export default function EditProfileScreen({ navigation }: Props) {
   const [gi, setGi] = useState(true);
   const [nogi, setNogi] = useState(true);
   const [bio, setBio] = useState("");
+  const [trainingGoals, setTrainingGoals] = useState("");
+  const [dnaGuard, setDnaGuard] = useState(50);
+  const [dnaPassing, setDnaPassing] = useState(50);
+  const [dnaSubmissions, setDnaSubmissions] = useState(50);
+  const [dnaTakedowns, setDnaTakedowns] = useState(50);
+  const [dnaEscapes, setDnaEscapes] = useState(50);
 
   const fetchProfile = useCallback(async () => {
     if (!authSession?.user) return;
@@ -241,6 +365,12 @@ export default function EditProfileScreen({ navigation }: Props) {
       setGi(p.gi);
       setNogi(p.nogi);
       setBio(p.bio || "");
+      setTrainingGoals(p.training_goals || "");
+      setDnaGuard(p.dna_guard);
+      setDnaPassing(p.dna_passing);
+      setDnaSubmissions(p.dna_submissions);
+      setDnaTakedowns(p.dna_takedowns);
+      setDnaEscapes(p.dna_escapes);
     }
 
     setLoading(false);
@@ -249,6 +379,8 @@ export default function EditProfileScreen({ navigation }: Props) {
   useEffect(() => {
     fetchProfile();
   }, [fetchProfile]);
+
+  const clamp = (val: number) => Math.max(0, Math.min(100, val));
 
   const handleSave = async () => {
     if (!authSession?.user) return;
@@ -264,6 +396,12 @@ export default function EditProfileScreen({ navigation }: Props) {
         gi,
         nogi,
         bio: bio.trim() || null,
+        training_goals: trainingGoals.trim() || null,
+        dna_guard: dnaGuard,
+        dna_passing: dnaPassing,
+        dna_submissions: dnaSubmissions,
+        dna_takedowns: dnaTakedowns,
+        dna_escapes: dnaEscapes,
       })
       .eq("id", authSession.user.id);
 
@@ -333,6 +471,19 @@ export default function EditProfileScreen({ navigation }: Props) {
             maxLength={300}
           />
 
+          {/* Training Goals */}
+          <Text style={styles.fieldLabel}>Training Goals</Text>
+          <TextInput
+            style={styles.textAreaInput}
+            placeholder="What are you working towards?"
+            placeholderTextColor={colors.textMuted}
+            multiline
+            textAlignVertical="top"
+            value={trainingGoals}
+            onChangeText={setTrainingGoals}
+            maxLength={300}
+          />
+
           {/* Belt */}
           <Text style={styles.fieldLabel}>Belt</Text>
           <ChipSelector
@@ -369,6 +520,41 @@ export default function EditProfileScreen({ navigation }: Props) {
               label="No-Gi"
               value={nogi}
               onToggle={() => setNogi(!nogi)}
+            />
+          </View>
+
+          {/* Game DNA */}
+          <Text style={styles.fieldLabel}>Game DNA</Text>
+          <View style={styles.dnaCard}>
+            <DnaSlider
+              label="Guard"
+              value={dnaGuard}
+              onDecrease={() => setDnaGuard(clamp(dnaGuard - 5))}
+              onIncrease={() => setDnaGuard(clamp(dnaGuard + 5))}
+            />
+            <DnaSlider
+              label="Passing"
+              value={dnaPassing}
+              onDecrease={() => setDnaPassing(clamp(dnaPassing - 5))}
+              onIncrease={() => setDnaPassing(clamp(dnaPassing + 5))}
+            />
+            <DnaSlider
+              label="Submissions"
+              value={dnaSubmissions}
+              onDecrease={() => setDnaSubmissions(clamp(dnaSubmissions - 5))}
+              onIncrease={() => setDnaSubmissions(clamp(dnaSubmissions + 5))}
+            />
+            <DnaSlider
+              label="Takedowns"
+              value={dnaTakedowns}
+              onDecrease={() => setDnaTakedowns(clamp(dnaTakedowns - 5))}
+              onIncrease={() => setDnaTakedowns(clamp(dnaTakedowns + 5))}
+            />
+            <DnaSlider
+              label="Escapes"
+              value={dnaEscapes}
+              onDecrease={() => setDnaEscapes(clamp(dnaEscapes - 5))}
+              onIncrease={() => setDnaEscapes(clamp(dnaEscapes + 5))}
             />
           </View>
 
@@ -415,7 +601,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingTop: 60,
+    paddingTop: Platform.OS === "ios" ? 16 : 20,
     paddingBottom: 8,
   },
   cancelText: {
@@ -471,6 +657,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 14,
     paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 24,
+  },
+  dnaCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    padding: 16,
     borderWidth: 1,
     borderColor: colors.border,
     marginBottom: 24,
