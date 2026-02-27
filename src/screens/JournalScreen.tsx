@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../hooks/useSession";
 import type { Profile, Session, Belt } from "../types";
@@ -426,6 +427,17 @@ export default function JournalScreen() {
               <Text style={styles.logButtonText}>+ Log Session</Text>
             </TouchableOpacity>
 
+            {/* View Progress */}
+            <TouchableOpacity
+              style={styles.progressButton}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate("Progress")}
+            >
+              <Ionicons name="stats-chart" size={18} color={colors.accent} />
+              <Text style={styles.progressButtonText}>View Progress</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+            </TouchableOpacity>
+
             {/* Section label */}
             {sessions.length > 0 && (
               <Text style={styles.sectionLabel}>Recent Sessions</Text>
@@ -502,6 +514,24 @@ const styles = StyleSheet.create({
     fontFamily: "DMSans_700Bold",
     fontSize: 16,
     color: colors.textPrimary,
+  },
+  progressButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 24,
+    gap: 10,
+  },
+  progressButtonText: {
+    fontFamily: "DMSans_500Medium",
+    fontSize: 15,
+    color: colors.textPrimary,
+    flex: 1,
   },
   sectionLabel: {
     fontFamily: "DMSans_500Medium",

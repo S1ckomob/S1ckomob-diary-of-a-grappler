@@ -20,6 +20,7 @@ import CoachScreen from "../screens/CoachScreen";
 import AICoachScreen from "../screens/AICoachScreen";
 import JoinGymScreen from "../screens/JoinGymScreen";
 import AddGoalScreen from "../screens/AddGoalScreen";
+import ProgressScreen from "../screens/ProgressScreen";
 import CommunityScreen from "../screens/CommunityScreen";
 import ComposePostScreen from "../screens/ComposePostScreen";
 import type { Technique } from "../types";
@@ -33,6 +34,7 @@ export type AuthStackParamList = {
 export type JournalStackParamList = {
   JournalHome: undefined;
   LogSession: undefined;
+  Progress: undefined;
 };
 
 export type ProfileStackParamList = {
@@ -76,6 +78,7 @@ function JournalStackScreen() {
         component={LogSessionScreen}
         options={{ presentation: "modal", animation: "slide_from_bottom" }}
       />
+      <JournalStack.Screen name="Progress" component={ProgressScreen} />
     </JournalStack.Navigator>
   );
 }
@@ -228,6 +231,7 @@ const linking: any = {
         screens: {
           JournalHome: "",
           LogSession: "log-session",
+          Progress: "progress",
         },
       },
       Techniques: {
