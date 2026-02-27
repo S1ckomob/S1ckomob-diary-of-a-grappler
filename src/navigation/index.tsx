@@ -17,6 +17,7 @@ import EditProfileScreen from "../screens/EditProfileScreen";
 import TechniquesScreen from "../screens/TechniquesScreen";
 import TechniqueDetailScreen from "../screens/TechniqueDetailScreen";
 import CoachScreen from "../screens/CoachScreen";
+import AICoachScreen from "../screens/AICoachScreen";
 import JoinGymScreen from "../screens/JoinGymScreen";
 import AddGoalScreen from "../screens/AddGoalScreen";
 import CommunityScreen from "../screens/CommunityScreen";
@@ -45,6 +46,7 @@ export type TechniquesStackParamList = {
 
 export type CoachStackParamList = {
   CoachHome: undefined;
+  AICoach: undefined;
   JoinGym: undefined;
   AddGoal: undefined;
 };
@@ -90,6 +92,7 @@ function CoachStackScreen() {
   return (
     <CoachStack_.Navigator screenOptions={{ headerShown: false }}>
       <CoachStack_.Screen name="CoachHome" component={CoachScreen} />
+      <CoachStack_.Screen name="AICoach" component={AICoachScreen} />
       <CoachStack_.Screen
         name="JoinGym"
         component={JoinGymScreen}
@@ -218,6 +221,7 @@ const linking: any = {
         initialRouteName: "CoachHome" as const,
         screens: {
           CoachHome: "coach",
+          AICoach: "ai-coach",
           JoinGym: "join-gym",
           AddGoal: "add-goal",
         },

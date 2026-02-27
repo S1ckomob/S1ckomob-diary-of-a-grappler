@@ -485,6 +485,26 @@ export default function CoachScreen() {
           <Text style={styles.headerTitle}>Coach</Text>
         </View>
 
+        {/* AI Coach Card */}
+        <TouchableOpacity
+          style={aiCardStyles.container}
+          onPress={() => navigation.navigate("AICoach")}
+          activeOpacity={0.8}
+        >
+          <View style={aiCardStyles.iconWrap}>
+            <Text style={aiCardStyles.icon}>{"\u{1F916}"}</Text>
+          </View>
+          <View style={aiCardStyles.content}>
+            <Text style={aiCardStyles.title}>AI Coach</Text>
+            <Text style={aiCardStyles.subtitle}>
+              Get personalized BJJ advice based on your game DNA
+            </Text>
+          </View>
+          <View style={aiCardStyles.arrow}>
+            <Text style={aiCardStyles.arrowText}>{"\u{203A}"}</Text>
+          </View>
+        </TouchableOpacity>
+
         {/* Gym Section */}
         {gym ? (
           <GymCard gym={gym} />
@@ -527,6 +547,54 @@ export default function CoachScreen() {
     </View>
   );
 }
+
+const aiCardStyles = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.accent + "14",
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.accent + "30",
+    marginBottom: 24,
+  },
+  iconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: colors.accent + "20",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 14,
+  },
+  icon: {
+    fontSize: 22,
+  },
+  content: {
+    flex: 1,
+  },
+  title: {
+    fontFamily: "DMSans_700Bold",
+    fontSize: 16,
+    color: colors.textPrimary,
+  },
+  subtitle: {
+    fontFamily: "DMSans_400Regular",
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 3,
+    lineHeight: 18,
+  },
+  arrow: {
+    marginLeft: 8,
+  },
+  arrowText: {
+    fontSize: 24,
+    color: colors.accent,
+    fontWeight: "700",
+  },
+});
 
 const styles = StyleSheet.create({
   container: {
