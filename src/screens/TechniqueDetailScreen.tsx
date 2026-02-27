@@ -18,59 +18,62 @@ import { useSession } from "../hooks/useSession";
 import type { Difficulty, TechniqueNote } from "../types";
 import type { TechniquesStackParamList } from "../navigation";
 
-// --- Theme ---
+// --- Theme (prototype-exact) ---
 
 const colors = {
   background: "#08080D",
-  surface: "#11111A",
-  surfaceRaised: "#1A1A26",
+  card: "#1A1A26",
+  cardBorder: "rgba(255,255,255,0.07)",
   accent: "#C41E3A",
+  accentBg: "rgba(196,30,58,0.15)",
+  accentBorder: "rgba(196,30,58,0.3)",
   gold: "#C9A84C",
-  green: "#2D8E4E",
-  textPrimary: "#FFFFFF",
-  textSecondary: "#9A9AA0",
-  textMuted: "#5A5A64",
-  border: "#1E1E2A",
+  green: "#2ECC71",
+  textWarm: "#F0EFE9",
+  textBody: "#B8B5A8",
+  textMuted: "#6B6860",
+  textDim: "#4A4740",
 };
 
 const DIFFICULTY_COLORS: Record<Difficulty, string> = {
-  beginner: "#2D8E4E",
+  beginner: "#2ECC71",
   intermediate: "#C9A84C",
   advanced: "#C41E3A",
 };
 
-const CATEGORY_ICONS: Record<string, string> = {
-  Guard: "\u{1F6E1}\u{FE0F}",
-  Passes: "\u{1F3C3}",
-  Passing: "\u{1F3C3}",
-  Submissions: "\u{1F4A5}",
-  Takedowns: "\u{1F93C}",
-  Escapes: "\u{1F6AA}",
-  Sweeps: "\u{1F300}",
-  Pins: "\u{1F4CC}",
-  Transitions: "\u{1F504}",
+const CATEGORY_COLORS: Record<string, string> = {
+  Guard: "#3B82F6",
+  Passes: "#F59E0B",
+  Passing: "#F59E0B",
+  Submissions: "#EF4444",
+  Takedowns: "#8B5CF6",
+  Escapes: "#10B981",
+  Sweeps: "#06B6D4",
+  Pins: "#F97316",
+  Transitions: "#EC4899",
 };
 
-function categoryIcon(category: string): string {
-  return CATEGORY_ICONS[category] || "\u{1F94B}";
-}
-
-function difficultyLabel(d: Difficulty): string {
-  return d.charAt(0).toUpperCase() + d.slice(1);
-}
-
-function hexToRgba(hex: string, alpha: number): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
+const CATEGORY_ICONS: Record<string, string> = {
+  Guard: "shield-outline",
+  Passes: "arrow-forward-outline",
+  Passing: "arrow-forward-outline",
+  Submissions: "flash-outline",
+  Takedowns: "trending-down-outline",
+  Escapes: "exit-outline",
+  Sweeps: "swap-vertical-outline",
+  Pins: "lock-closed-outline",
+  Transitions: "repeat-outline",
+};
 
 const serifFont = Platform.select({
   ios: "Georgia",
   android: "serif",
-  default: "serif",
+  default: "Georgia, serif",
 });
+
+function difficultyLabel(d: Difficulty): string {
+  return d.charAt(0).toUpperCase() + d.slice(1);
+}
 
 // --- Types ---
 
@@ -83,6 +86,8 @@ export default function TechniqueDetailScreen({ navigation, route }: Props) {
   const { session } = useSession();
   const diffColor =
     DIFFICULTY_COLORS[technique.difficulty] || colors.textMuted;
+  const catColor = CATEGORY_COLORS[technique.category] || colors.textMuted;
+  const catIcon = CATEGORY_ICONS[technique.category] || "help-outline";
 
   // Notes state
   const [notesText, setNotesText] = useState("");
@@ -154,20 +159,20 @@ export default function TechniqueDetailScreen({ navigation, route }: Props) {
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               style={styles.backButton}
             >
-              <Ionicons
-                name="arrow-back"
-                size={20}
-                color={colors.textSecondary}
-              />
+              <Ionicons name="chevron-back" size={20} color={colors.textMuted} />
               <Text style={styles.backText}>Back</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Title area */}
+          {/* Icon circle + Title */}
           <View style={styles.titleArea}>
-            <Text style={styles.categoryEmoji}>
-              {categoryIcon(technique.category)}
-            </Text>
+            <View style={[styles.iconCircle, { backgroundColor: `${catColor}1A` }]}>
+              <Ionicons
+                name={catIcon as any}
+                size={32}
+                color={catColor}
+              />
+            </View>
             <Text style={styles.name}>{technique.name}</Text>
 
             {/* Badge row */}
@@ -180,7 +185,7 @@ export default function TechniqueDetailScreen({ navigation, route }: Props) {
               <View
                 style={[
                   styles.diffBadge,
-                  { backgroundColor: hexToRgba(diffColor, 0.15) },
+                  { backgroundColor: `${diffColor}26` },
                 ]}
               >
                 <View
@@ -192,11 +197,7 @@ export default function TechniqueDetailScreen({ navigation, route }: Props) {
               </View>
               {technique.is_beginner && (
                 <View style={styles.beginnerBadge}>
-                  <Ionicons
-                    name="leaf-outline"
-                    size={12}
-                    color={colors.green}
-                  />
+                  <Ionicons name="star" size={10} color={colors.gold} />
                   <Text style={styles.beginnerText}>Beginner</Text>
                 </View>
               )}
@@ -212,9 +213,11 @@ export default function TechniqueDetailScreen({ navigation, route }: Props) {
           {technique.description && (
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>Description</Text>
-              <Text style={styles.descriptionText}>
-                {technique.description}
-              </Text>
+              <View style={styles.descriptionCard}>
+                <Text style={styles.descriptionText}>
+                  {technique.description}
+                </Text>
+              </View>
             </View>
           )}
 
@@ -225,7 +228,11 @@ export default function TechniqueDetailScreen({ navigation, route }: Props) {
               onPress={handleVideoPress}
               activeOpacity={0.8}
             >
-              <Ionicons name="play-circle" size={20} color={colors.textPrimary} />
+              <Ionicons
+                name="play-circle"
+                size={18}
+                color="#FFFFFF"
+              />
               <Text style={styles.videoText}>Watch Video</Text>
             </TouchableOpacity>
           )}
@@ -245,8 +252,8 @@ export default function TechniqueDetailScreen({ navigation, route }: Props) {
                   <View style={styles.notesCard}>
                     <TextInput
                       style={styles.notesInput}
-                      placeholder="Add personal notes about this technique..."
-                      placeholderTextColor={colors.textMuted}
+                      placeholder="Add personal notes, drills, or key details..."
+                      placeholderTextColor={colors.textDim}
                       value={notesText}
                       onChangeText={setNotesText}
                       multiline
@@ -254,20 +261,16 @@ export default function TechniqueDetailScreen({ navigation, route }: Props) {
                     />
                   </View>
                   <TouchableOpacity
-                    style={styles.saveButton}
+                    style={[styles.saveButton, saving && styles.saveButtonDisabled]}
                     onPress={saveNotes}
                     activeOpacity={0.8}
                     disabled={saving}
                   >
                     {saving ? (
-                      <ActivityIndicator size="small" color={colors.textPrimary} />
+                      <ActivityIndicator size="small" color="#FFFFFF" />
                     ) : (
                       <>
-                        <Ionicons
-                          name="save-outline"
-                          size={16}
-                          color={colors.textPrimary}
-                        />
+                        <Ionicons name="checkmark-circle-outline" size={16} color="#FFFFFF" />
                         <Text style={styles.saveButtonText}>Save Notes</Text>
                       </>
                     )}
@@ -303,31 +306,36 @@ const styles = StyleSheet.create({
   backButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 4,
   },
   backText: {
     fontFamily: "DMSans_500Medium",
-    fontSize: 16,
-    color: colors.textSecondary,
+    fontSize: 14,
+    color: colors.textMuted,
   },
 
-  // Title
+  // Title area
   titleArea: {
     alignItems: "center",
-    paddingTop: 20,
-    paddingBottom: 28,
+    paddingTop: 24,
+    paddingBottom: 32,
   },
-  categoryEmoji: {
-    fontSize: 48,
-    marginBottom: 16,
+  iconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
   },
   name: {
     fontFamily: serifFont,
-    fontSize: 28,
-    color: colors.textPrimary,
+    fontSize: 26,
+    color: colors.textWarm,
     textAlign: "center",
     marginBottom: 16,
     fontWeight: "700",
+    lineHeight: 34,
   },
   badgeRow: {
     flexDirection: "row",
@@ -336,52 +344,59 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   categoryBadge: {
-    backgroundColor: hexToRgba(colors.accent, 0.15),
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
+    backgroundColor: colors.accentBg,
+    borderWidth: 1,
+    borderColor: colors.accentBorder,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   categoryBadgeText: {
     fontFamily: "DMSans_500Medium",
-    fontSize: 13,
+    fontSize: 11,
     color: colors.accent,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   diffBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   diffDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
   },
   diffText: {
     fontFamily: "DMSans_500Medium",
-    fontSize: 13,
+    fontSize: 11,
   },
   beginnerBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-    backgroundColor: hexToRgba(colors.green, 0.15),
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: "rgba(201,168,76,0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(201,168,76,0.3)",
   },
   beginnerText: {
     fontFamily: "DMSans_500Medium",
-    fontSize: 13,
-    color: colors.green,
+    fontSize: 11,
+    color: colors.gold,
   },
   subcategory: {
     fontFamily: "DMSans_400Regular",
-    fontSize: 14,
+    fontSize: 12,
     color: colors.textMuted,
-    marginTop: 10,
+    marginTop: 12,
+    letterSpacing: 0.3,
   },
 
   // Sections
@@ -390,17 +405,24 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     fontFamily: "DMSans_500Medium",
-    fontSize: 13,
+    fontSize: 10,
     color: colors.textMuted,
     textTransform: "uppercase",
-    letterSpacing: 1,
+    letterSpacing: 1.2,
     marginBottom: 10,
+  },
+  descriptionCard: {
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
   descriptionText: {
     fontFamily: "DMSans_400Regular",
-    fontSize: 16,
-    color: colors.textSecondary,
-    lineHeight: 26,
+    fontSize: 14,
+    color: colors.textBody,
+    lineHeight: 24,
   },
 
   // Video
@@ -411,13 +433,13 @@ const styles = StyleSheet.create({
     gap: 8,
     backgroundColor: colors.accent,
     borderRadius: 14,
-    paddingVertical: 16,
+    paddingVertical: 14,
     marginBottom: 24,
   },
   videoText: {
     fontFamily: "DMSans_700Bold",
-    fontSize: 16,
-    color: colors.textPrimary,
+    fontSize: 14,
+    color: "#FFFFFF",
   },
 
   // Notes
@@ -425,18 +447,18 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   notesCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 14,
+    backgroundColor: colors.card,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.cardBorder,
     padding: 16,
     marginBottom: 12,
   },
   notesInput: {
     fontFamily: "DMSans_400Regular",
-    fontSize: 15,
-    color: colors.textPrimary,
-    minHeight: 100,
+    fontSize: 14,
+    color: colors.textWarm,
+    minHeight: 120,
     lineHeight: 22,
   },
   saveButton: {
@@ -444,15 +466,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: colors.surfaceRaised,
+    backgroundColor: colors.accent,
     borderRadius: 12,
     paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
+  },
+  saveButtonDisabled: {
+    opacity: 0.7,
   },
   saveButtonText: {
-    fontFamily: "DMSans_500Medium",
-    fontSize: 15,
-    color: colors.textPrimary,
+    fontFamily: "DMSans_700Bold",
+    fontSize: 14,
+    color: "#FFFFFF",
   },
 });

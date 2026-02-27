@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   ScrollView,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -17,27 +18,38 @@ import { supabase } from "../lib/supabase";
 import type { Technique, Difficulty } from "../types";
 import type { TechniquesStackParamList } from "../navigation";
 
-// --- Theme ---
+// --- Theme (prototype-exact) ---
 
 const colors = {
   background: "#08080D",
-  surface: "#11111A",
-  surfaceRaised: "#1A1A26",
+  card: "#1A1A26",
+  cardBorder: "rgba(255,255,255,0.07)",
   accent: "#C41E3A",
+  accentBg: "rgba(196,30,58,0.15)",
+  accentBorder: "rgba(196,30,58,0.3)",
   gold: "#C9A84C",
-  green: "#2D8E4E",
-  textPrimary: "#FFFFFF",
-  textSecondary: "#9A9AA0",
-  textMuted: "#5A5A64",
-  border: "#1E1E2A",
+  goldBg: "rgba(201,168,76,0.15)",
+  goldBorder: "rgba(201,168,76,0.3)",
+  textWarm: "#F0EFE9",
+  textBody: "#B8B5A8",
+  textMuted: "#6B6860",
+  textDim: "#4A4740",
 };
 
-// --- Helpers ---
-
 const DIFFICULTY_COLORS: Record<Difficulty, string> = {
-  beginner: "#2D8E4E",
+  beginner: "#2ECC71",
   intermediate: "#C9A84C",
   advanced: "#C41E3A",
+};
+
+const CATEGORY_COLORS: Record<string, string> = {
+  Guard: "#3B82F6",
+  Passes: "#F59E0B",
+  Submissions: "#EF4444",
+  Takedowns: "#8B5CF6",
+  Escapes: "#10B981",
+  Sweeps: "#06B6D4",
+  Transitions: "#EC4899",
 };
 
 const CATEGORIES = [
@@ -50,15 +62,14 @@ const CATEGORIES = [
   "Transitions",
 ];
 
+const serifFont = Platform.select({
+  ios: "Georgia",
+  android: "serif",
+  default: "Georgia, serif",
+});
+
 function difficultyLabel(d: Difficulty): string {
   return d.charAt(0).toUpperCase() + d.slice(1);
-}
-
-function hexToRgba(hex: string, alpha: number): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 type TechniquesNav = NativeStackNavigationProp<
@@ -93,80 +104,24 @@ function CategoryPill({
 const pillStyles = StyleSheet.create({
   pill: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 7,
     borderRadius: 20,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.cardBorder,
     marginRight: 8,
   },
   pillActive: {
-    backgroundColor: hexToRgba(colors.accent, 0.15),
+    backgroundColor: colors.accent,
     borderColor: colors.accent,
   },
   text: {
     fontFamily: "DMSans_500Medium",
-    fontSize: 13,
-    color: colors.textSecondary,
+    fontSize: 12,
+    color: colors.textMuted,
   },
   textActive: {
-    color: colors.accent,
-  },
-});
-
-// --- Difficulty Filter Chip ---
-
-function DifficultyChip({
-  label,
-  color,
-  active,
-  onPress,
-}: {
-  label: string;
-  color: string;
-  active: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <TouchableOpacity
-      style={[
-        chipStyles.chip,
-        active && { backgroundColor: hexToRgba(color, 0.15), borderColor: color },
-      ]}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      <View style={[chipStyles.dot, { backgroundColor: active ? color : colors.textMuted }]} />
-      <Text
-        style={[chipStyles.text, active && { color }]}
-      >
-        {label}
-      </Text>
-    </TouchableOpacity>
-  );
-}
-
-const chipStyles = StyleSheet.create({
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  text: {
-    fontFamily: "DMSans_500Medium",
-    fontSize: 13,
-    color: colors.textSecondary,
+    color: "#FFFFFF",
   },
 });
 
@@ -180,6 +135,7 @@ function TechniqueCard({
   onPress: () => void;
 }) {
   const diffColor = DIFFICULTY_COLORS[technique.difficulty] || colors.textMuted;
+  const diffBg = `${diffColor}26`; // ~15% opacity
 
   return (
     <TouchableOpacity
@@ -192,12 +148,7 @@ function TechniqueCard({
         <View style={cardStyles.categoryBadge}>
           <Text style={cardStyles.categoryText}>{technique.category}</Text>
         </View>
-        <View
-          style={[
-            cardStyles.diffBadge,
-            { backgroundColor: hexToRgba(diffColor, 0.15) },
-          ]}
-        >
+        <View style={[cardStyles.diffBadge, { backgroundColor: diffBg }]}>
           <View style={[cardStyles.diffDot, { backgroundColor: diffColor }]} />
           <Text style={[cardStyles.diffText, { color: diffColor }]}>
             {difficultyLabel(technique.difficulty)}
@@ -222,70 +173,77 @@ function TechniqueCard({
 
 const cardStyles = StyleSheet.create({
   container: {
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: 14,
+    backgroundColor: colors.card,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.cardBorder,
   },
   name: {
-    fontFamily: "DMSans_700Bold",
-    fontSize: 16,
-    color: colors.textPrimary,
+    fontFamily: serifFont,
+    fontSize: 17,
+    color: colors.textWarm,
     marginBottom: 10,
+    fontWeight: "600",
   },
   badges: {
     flexDirection: "row",
     flexWrap: "wrap",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
   },
   categoryBadge: {
-    backgroundColor: hexToRgba(colors.accent, 0.15),
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    backgroundColor: colors.accentBg,
+    borderWidth: 1,
+    borderColor: colors.accentBorder,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 8,
   },
   categoryText: {
     fontFamily: "DMSans_500Medium",
-    fontSize: 12,
+    fontSize: 10,
     color: colors.accent,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   subcategoryBadge: {
-    backgroundColor: colors.surface,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    backgroundColor: "rgba(255,255,255,0.04)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
   subcategoryText: {
     fontFamily: "DMSans_400Regular",
-    fontSize: 12,
+    fontSize: 10,
     color: colors.textMuted,
   },
   diffBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 8,
   },
   diffDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
   },
   diffText: {
     fontFamily: "DMSans_500Medium",
-    fontSize: 12,
+    fontSize: 10,
   },
   description: {
     fontFamily: "DMSans_400Regular",
-    fontSize: 13,
-    color: colors.textSecondary,
+    fontSize: 12,
+    color: colors.textBody,
     marginTop: 10,
-    lineHeight: 19,
+    lineHeight: 18,
   },
 });
 
@@ -294,14 +252,14 @@ const cardStyles = StyleSheet.create({
 function EmptyState({ hasFilters }: { hasFilters: boolean }) {
   return (
     <View style={emptyStyles.container}>
-      <Ionicons name="search-outline" size={48} color={colors.textMuted} />
+      <Ionicons name="search-outline" size={44} color={colors.textDim} />
       <Text style={emptyStyles.title}>
         {hasFilters ? "No matches" : "No techniques yet"}
       </Text>
       <Text style={emptyStyles.subtitle}>
         {hasFilters
           ? "Try adjusting your filters or search term."
-          : "The technique library is empty. Techniques will appear here once added."}
+          : "Techniques will appear here once added."}
       </Text>
     </View>
   );
@@ -314,18 +272,19 @@ const emptyStyles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   title: {
-    fontFamily: "DMSans_700Bold",
-    fontSize: 20,
-    color: colors.textPrimary,
+    fontFamily: serifFont,
+    fontSize: 18,
+    color: colors.textWarm,
     marginTop: 16,
-    marginBottom: 8,
+    marginBottom: 6,
+    fontWeight: "600",
   },
   subtitle: {
     fontFamily: "DMSans_400Regular",
-    fontSize: 15,
-    color: colors.textSecondary,
+    fontSize: 13,
+    color: colors.textMuted,
     textAlign: "center",
-    lineHeight: 22,
+    lineHeight: 20,
   },
 });
 
@@ -364,6 +323,12 @@ export default function TechniquesScreen() {
     setRefreshing(false);
   }, [fetchTechniques]);
 
+  // Derive categories present in data (for section headers)
+  const categoriesInData = useMemo(() => {
+    const cats = [...new Set(techniques.map((t) => t.category))];
+    return cats.sort();
+  }, [techniques]);
+
   // Filter
   const filtered = useMemo(() => {
     let result = techniques;
@@ -391,6 +356,27 @@ export default function TechniquesScreen() {
     return result;
   }, [techniques, activeCategory, activeDifficulty, beginnerOnly, search]);
 
+  // Group by category for section rendering
+  const groupedData = useMemo(() => {
+    const map = new Map<string, Technique[]>();
+    for (const t of filtered) {
+      const list = map.get(t.category) || [];
+      list.push(t);
+      map.set(t.category, list);
+    }
+    const result: { type: "header"; category: string; count: number; id: string }[] | { type: "technique"; technique: Technique; id: string }[] = [];
+    const items: ({ type: "header"; category: string; count: number; id: string } | { type: "technique"; technique: Technique; id: string })[] = [];
+    const sortedCats = Array.from(map.keys()).sort();
+    for (const cat of sortedCats) {
+      const techs = map.get(cat)!;
+      items.push({ type: "header", category: cat, count: techs.length, id: `header-${cat}` });
+      for (const t of techs) {
+        items.push({ type: "technique", technique: t, id: t.id });
+      }
+    }
+    return items;
+  }, [filtered]);
+
   const hasFilters = !!(
     search.trim() ||
     activeCategory ||
@@ -406,42 +392,62 @@ export default function TechniquesScreen() {
     setActiveDifficulty((prev) => (prev === diff ? null : diff));
   };
 
+  type ListItem =
+    | { type: "header"; category: string; count: number; id: string }
+    | { type: "technique"; technique: Technique; id: string };
+
   const renderItem = useCallback(
-    ({ item }: { item: Technique }) => (
-      <TechniqueCard
-        technique={item}
-        onPress={() =>
-          navigation.navigate("TechniqueDetail", { technique: item })
-        }
-      />
-    ),
+    ({ item }: { item: ListItem }) => {
+      if (item.type === "header") {
+        const catColor = CATEGORY_COLORS[item.category] || colors.textMuted;
+        return (
+          <View style={styles.sectionHeader}>
+            <View style={[styles.sectionDot, { backgroundColor: catColor }]} />
+            <Text style={styles.sectionTitle}>{item.category}</Text>
+            <Text style={styles.sectionCount}>{item.count}</Text>
+          </View>
+        );
+      }
+      return (
+        <TechniqueCard
+          technique={item.technique}
+          onPress={() =>
+            navigation.navigate("TechniqueDetail", {
+              technique: item.technique,
+            })
+          }
+        />
+      );
+    },
     [navigation]
   );
 
-  const keyExtractor = useCallback((item: Technique) => item.id, []);
+  const keyExtractor = useCallback((item: ListItem) => item.id, []);
 
   const ListHeader = (
     <>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Techniques</Text>
-        <Text style={styles.headerCount}>
-          {filtered.length} technique{filtered.length !== 1 ? "s" : ""}
-        </Text>
+        <View>
+          <Text style={styles.headerTitle}>Techniques</Text>
+          <Text style={styles.headerSub}>
+            {filtered.length} technique{filtered.length !== 1 ? "s" : ""} in library
+          </Text>
+        </View>
       </View>
 
       {/* Search */}
       <View style={styles.searchContainer}>
         <Ionicons
           name="search-outline"
-          size={18}
-          color={colors.textMuted}
+          size={16}
+          color={colors.textDim}
           style={styles.searchIcon}
         />
         <TextInput
           style={styles.searchInput}
           placeholder="Search techniques..."
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={colors.textDim}
           value={search}
           onChangeText={setSearch}
           autoCapitalize="none"
@@ -449,12 +455,12 @@ export default function TechniquesScreen() {
         />
         {search.length > 0 && (
           <TouchableOpacity onPress={() => setSearch("")}>
-            <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+            <Ionicons name="close-circle" size={16} color={colors.textDim} />
           </TouchableOpacity>
         )}
       </View>
 
-      {/* Category Pills - horizontal scroll */}
+      {/* Category Pills */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -476,18 +482,39 @@ export default function TechniquesScreen() {
         ))}
       </ScrollView>
 
-      {/* Difficulty Filters + Beginner Toggle */}
+      {/* Difficulty + Beginner row */}
       <View style={styles.filterRow}>
         {(["beginner", "intermediate", "advanced"] as Difficulty[]).map(
-          (diff) => (
-            <DifficultyChip
-              key={diff}
-              label={difficultyLabel(diff)}
-              color={DIFFICULTY_COLORS[diff]}
-              active={activeDifficulty === diff}
-              onPress={() => toggleDifficulty(diff)}
-            />
-          )
+          (diff) => {
+            const c = DIFFICULTY_COLORS[diff];
+            const active = activeDifficulty === diff;
+            return (
+              <TouchableOpacity
+                key={diff}
+                style={[
+                  styles.diffChip,
+                  active && { backgroundColor: `${c}26`, borderColor: `${c}4D` },
+                ]}
+                onPress={() => toggleDifficulty(diff)}
+                activeOpacity={0.7}
+              >
+                <View
+                  style={[
+                    styles.diffChipDot,
+                    { backgroundColor: active ? c : colors.textDim },
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.diffChipText,
+                    active && { color: c },
+                  ]}
+                >
+                  {difficultyLabel(diff)}
+                </Text>
+              </TouchableOpacity>
+            );
+          }
         )}
         <TouchableOpacity
           style={[
@@ -498,9 +525,9 @@ export default function TechniquesScreen() {
           activeOpacity={0.7}
         >
           <Ionicons
-            name="leaf-outline"
-            size={14}
-            color={beginnerOnly ? colors.green : colors.textMuted}
+            name="star-outline"
+            size={12}
+            color={beginnerOnly ? colors.gold : colors.textDim}
           />
           <Text
             style={[
@@ -526,7 +553,7 @@ export default function TechniquesScreen() {
   return (
     <View style={styles.container}>
       <FlatList
-        data={filtered}
+        data={groupedData as ListItem[]}
         keyExtractor={keyExtractor}
         renderItem={renderItem}
         contentContainerStyle={styles.list}
@@ -565,19 +592,18 @@ const styles = StyleSheet.create({
   // Header
   header: {
     paddingTop: 60,
-    paddingBottom: 16,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "baseline",
+    paddingBottom: 20,
   },
   headerTitle: {
-    fontFamily: "DMSans_700Bold",
-    fontSize: 26,
-    color: colors.textPrimary,
+    fontFamily: serifFont,
+    fontSize: 28,
+    color: colors.textWarm,
+    fontWeight: "700",
+    marginBottom: 4,
   },
-  headerCount: {
+  headerSub: {
     fontFamily: "DMSans_400Regular",
-    fontSize: 14,
+    fontSize: 12,
     color: colors.textMuted,
   },
 
@@ -585,12 +611,12 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.surface,
+    backgroundColor: colors.card,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.cardBorder,
     paddingHorizontal: 14,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   searchIcon: {
     marginRight: 8,
@@ -598,9 +624,9 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontFamily: "DMSans_400Regular",
-    fontSize: 15,
-    color: colors.textPrimary,
-    paddingVertical: 12,
+    fontSize: 14,
+    color: colors.textWarm,
+    paddingVertical: 11,
   },
 
   // Category scroll
@@ -617,7 +643,28 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-    marginBottom: 16,
+    marginBottom: 20,
+  },
+  diffChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  diffChipDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  diffChipText: {
+    fontFamily: "DMSans_500Medium",
+    fontSize: 11,
+    color: colors.textMuted,
   },
 
   // Beginner toggle
@@ -625,23 +672,50 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.cardBorder,
   },
   beginnerToggleActive: {
-    backgroundColor: hexToRgba(colors.green, 0.15),
-    borderColor: colors.green,
+    backgroundColor: colors.goldBg,
+    borderColor: colors.goldBorder,
   },
   beginnerToggleText: {
     fontFamily: "DMSans_500Medium",
-    fontSize: 13,
-    color: colors.textMuted,
+    fontSize: 11,
+    color: colors.textDim,
   },
   beginnerToggleTextActive: {
-    color: colors.green,
+    color: colors.gold,
+  },
+
+  // Section headers
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  sectionDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+  },
+  sectionTitle: {
+    fontFamily: "DMSans_500Medium",
+    fontSize: 10,
+    color: colors.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
+    flex: 1,
+  },
+  sectionCount: {
+    fontFamily: "DMSans_400Regular",
+    fontSize: 10,
+    color: colors.textDim,
   },
 });
