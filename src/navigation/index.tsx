@@ -2,7 +2,7 @@ import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import { View, StyleSheet, ActivityIndicator } from "react-native";
 import { useSession } from "../hooks/useSession";
 import LoginScreen from "../screens/LoginScreen";
 import SignUpScreen from "../screens/SignUpScreen";
@@ -16,6 +16,7 @@ import TechniqueDetailScreen from "../screens/TechniqueDetailScreen";
 import CoachScreen from "../screens/CoachScreen";
 import JoinGymScreen from "../screens/JoinGymScreen";
 import AddGoalScreen from "../screens/AddGoalScreen";
+import CommunityScreen from "../screens/CommunityScreen";
 import type { Technique } from "../types";
 
 export type AuthStackParamList = {
@@ -44,20 +45,6 @@ export type CoachStackParamList = {
   JoinGym: undefined;
   AddGoal: undefined;
 };
-
-// --- Placeholder tab screens ---
-
-function PlaceholderScreen({ name }: { name: string }) {
-  return (
-    <View style={styles.screen}>
-      <Text style={styles.text}>{name}</Text>
-    </View>
-  );
-}
-
-function CommunityScreen() {
-  return <PlaceholderScreen name="Community" />;
-}
 
 // --- Navigators ---
 
@@ -184,17 +171,6 @@ export default function Navigation() {
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#08080D",
-  },
-  text: {
-    fontFamily: "DMSans_400Regular",
-    fontSize: 18,
-    color: "#FFFFFF",
-  },
   loading: {
     flex: 1,
     alignItems: "center",
