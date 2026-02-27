@@ -3,12 +3,14 @@ import {
   View,
   Text,
   StyleSheet,
-  SectionList,
+  FlatList,
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
   RefreshControl,
+  ScrollView,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { supabase } from "../lib/supabase";
@@ -23,36 +25,30 @@ const colors = {
   surfaceRaised: "#1A1A26",
   accent: "#C41E3A",
   gold: "#C9A84C",
+  green: "#2D8E4E",
   textPrimary: "#FFFFFF",
   textSecondary: "#9A9AA0",
   textMuted: "#5A5A64",
   border: "#1E1E2A",
-  searchBg: "#11111A",
 };
 
 // --- Helpers ---
-
-const CATEGORY_ICONS: Record<string, string> = {
-  Guard: "\u{1F6E1}\u{FE0F}",
-  Passes: "\u{1F3C3}",
-  Passing: "\u{1F3C3}",
-  Submissions: "\u{1F4A5}",
-  Takedowns: "\u{1F93C}",
-  Escapes: "\u{1F6AA}",
-  Sweeps: "\u{1F300}",
-  Pins: "\u{1F4CC}",
-  Transitions: "\u{1F504}",
-};
-
-function categoryIcon(category: string): string {
-  return CATEGORY_ICONS[category] || "\u{1F94B}";
-}
 
 const DIFFICULTY_COLORS: Record<Difficulty, string> = {
   beginner: "#2D8E4E",
   intermediate: "#C9A84C",
   advanced: "#C41E3A",
 };
+
+const CATEGORIES = [
+  "Guard",
+  "Passes",
+  "Submissions",
+  "Takedowns",
+  "Escapes",
+  "Sweeps",
+  "Transitions",
+];
 
 function difficultyLabel(d: Difficulty): string {
   return d.charAt(0).toUpperCase() + d.slice(1);
@@ -70,9 +66,9 @@ type TechniquesNav = NativeStackNavigationProp<
   "TechniquesHome"
 >;
 
-// --- Filter Chip ---
+// --- Category Pill ---
 
-function FilterChip({
+function CategoryPill({
   label,
   active,
   onPress,
@@ -83,29 +79,30 @@ function FilterChip({
 }) {
   return (
     <TouchableOpacity
-      style={[filterStyles.chip, active && filterStyles.chipActive]}
+      style={[pillStyles.pill, active && pillStyles.pillActive]}
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <Text style={[filterStyles.text, active && filterStyles.textActive]}>
+      <Text style={[pillStyles.text, active && pillStyles.textActive]}>
         {label}
       </Text>
     </TouchableOpacity>
   );
 }
 
-const filterStyles = StyleSheet.create({
-  chip: {
-    paddingHorizontal: 14,
+const pillStyles = StyleSheet.create({
+  pill: {
+    paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
+    marginRight: 8,
   },
-  chipActive: {
-    backgroundColor: colors.surfaceRaised,
-    borderColor: colors.gold,
+  pillActive: {
+    backgroundColor: hexToRgba(colors.accent, 0.15),
+    borderColor: colors.accent,
   },
   text: {
     fontFamily: "DMSans_500Medium",
@@ -113,7 +110,63 @@ const filterStyles = StyleSheet.create({
     color: colors.textSecondary,
   },
   textActive: {
-    color: colors.gold,
+    color: colors.accent,
+  },
+});
+
+// --- Difficulty Filter Chip ---
+
+function DifficultyChip({
+  label,
+  color,
+  active,
+  onPress,
+}: {
+  label: string;
+  color: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      style={[
+        chipStyles.chip,
+        active && { backgroundColor: hexToRgba(color, 0.15), borderColor: color },
+      ]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <View style={[chipStyles.dot, { backgroundColor: active ? color : colors.textMuted }]} />
+      <Text
+        style={[chipStyles.text, active && { color }]}
+      >
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+const chipStyles = StyleSheet.create({
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  text: {
+    fontFamily: "DMSans_500Medium",
+    fontSize: 13,
+    color: colors.textSecondary,
   },
 });
 
@@ -137,10 +190,18 @@ function TechniqueCard({
       <Text style={cardStyles.name}>{technique.name}</Text>
       <View style={cardStyles.badges}>
         <View style={cardStyles.categoryBadge}>
-          <Text style={cardStyles.categoryIcon}>
-            {categoryIcon(technique.category)}
-          </Text>
           <Text style={cardStyles.categoryText}>{technique.category}</Text>
+        </View>
+        <View
+          style={[
+            cardStyles.diffBadge,
+            { backgroundColor: hexToRgba(diffColor, 0.15) },
+          ]}
+        >
+          <View style={[cardStyles.diffDot, { backgroundColor: diffColor }]} />
+          <Text style={[cardStyles.diffText, { color: diffColor }]}>
+            {difficultyLabel(technique.difficulty)}
+          </Text>
         </View>
         {technique.subcategory && (
           <View style={cardStyles.subcategoryBadge}>
@@ -149,12 +210,6 @@ function TechniqueCard({
             </Text>
           </View>
         )}
-        <View style={[cardStyles.diffBadge, { backgroundColor: hexToRgba(diffColor, 0.15) }]}>
-          <View style={[cardStyles.diffDot, { backgroundColor: diffColor }]} />
-          <Text style={[cardStyles.diffText, { color: diffColor }]}>
-            {difficultyLabel(technique.difficulty)}
-          </Text>
-        </View>
       </View>
       {technique.description ? (
         <Text style={cardStyles.description} numberOfLines={2}>
@@ -167,7 +222,7 @@ function TechniqueCard({
 
 const cardStyles = StyleSheet.create({
   container: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceRaised,
     borderRadius: 14,
     padding: 16,
     marginBottom: 10,
@@ -187,24 +242,18 @@ const cardStyles = StyleSheet.create({
     gap: 8,
   },
   categoryBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: colors.surfaceRaised,
+    backgroundColor: hexToRgba(colors.accent, 0.15),
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
   },
-  categoryIcon: {
-    fontSize: 12,
-  },
   categoryText: {
     fontFamily: "DMSans_500Medium",
     fontSize: 12,
-    color: colors.textSecondary,
+    color: colors.accent,
   },
   subcategoryBadge: {
-    backgroundColor: colors.surfaceRaised,
+    backgroundColor: colors.surface,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
@@ -245,7 +294,7 @@ const cardStyles = StyleSheet.create({
 function EmptyState({ hasFilters }: { hasFilters: boolean }) {
   return (
     <View style={emptyStyles.container}>
-      <Text style={emptyStyles.icon}>{"\u{1F50D}"}</Text>
+      <Ionicons name="search-outline" size={48} color={colors.textMuted} />
       <Text style={emptyStyles.title}>
         {hasFilters ? "No matches" : "No techniques yet"}
       </Text>
@@ -264,14 +313,11 @@ const emptyStyles = StyleSheet.create({
     paddingTop: 60,
     paddingHorizontal: 40,
   },
-  icon: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
   title: {
     fontFamily: "DMSans_700Bold",
     fontSize: 20,
     color: colors.textPrimary,
+    marginTop: 16,
     marginBottom: 8,
   },
   subtitle: {
@@ -285,11 +331,6 @@ const emptyStyles = StyleSheet.create({
 
 // --- Main Screen ---
 
-interface SectionData {
-  title: string;
-  data: Technique[];
-}
-
 export default function TechniquesScreen() {
   const navigation = useNavigation<TechniquesNav>();
   const [techniques, setTechniques] = useState<Technique[]>([]);
@@ -300,6 +341,7 @@ export default function TechniquesScreen() {
   const [activeDifficulty, setActiveDifficulty] = useState<Difficulty | null>(
     null
   );
+  const [beginnerOnly, setBeginnerOnly] = useState(false);
 
   const fetchTechniques = useCallback(async () => {
     const { data } = await supabase
@@ -322,12 +364,6 @@ export default function TechniquesScreen() {
     setRefreshing(false);
   }, [fetchTechniques]);
 
-  // Derive categories from data
-  const categories = useMemo(() => {
-    const cats = [...new Set(techniques.map((t) => t.category))];
-    return cats.sort();
-  }, [techniques]);
-
   // Filter
   const filtered = useMemo(() => {
     let result = techniques;
@@ -337,6 +373,9 @@ export default function TechniquesScreen() {
     }
     if (activeDifficulty) {
       result = result.filter((t) => t.difficulty === activeDifficulty);
+    }
+    if (beginnerOnly) {
+      result = result.filter((t) => t.is_beginner);
     }
     if (search.trim()) {
       const q = search.trim().toLowerCase();
@@ -350,22 +389,14 @@ export default function TechniquesScreen() {
     }
 
     return result;
-  }, [techniques, activeCategory, activeDifficulty, search]);
+  }, [techniques, activeCategory, activeDifficulty, beginnerOnly, search]);
 
-  // Group into sections by category
-  const sections: SectionData[] = useMemo(() => {
-    const map = new Map<string, Technique[]>();
-    for (const t of filtered) {
-      const list = map.get(t.category) || [];
-      list.push(t);
-      map.set(t.category, list);
-    }
-    return Array.from(map.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([title, data]) => ({ title, data }));
-  }, [filtered]);
-
-  const hasFilters = !!(search.trim() || activeCategory || activeDifficulty);
+  const hasFilters = !!(
+    search.trim() ||
+    activeCategory ||
+    activeDifficulty ||
+    beginnerOnly
+  );
 
   const toggleCategory = (cat: string) => {
     setActiveCategory((prev) => (prev === cat ? null : cat));
@@ -374,6 +405,115 @@ export default function TechniquesScreen() {
   const toggleDifficulty = (diff: Difficulty) => {
     setActiveDifficulty((prev) => (prev === diff ? null : diff));
   };
+
+  const renderItem = useCallback(
+    ({ item }: { item: Technique }) => (
+      <TechniqueCard
+        technique={item}
+        onPress={() =>
+          navigation.navigate("TechniqueDetail", { technique: item })
+        }
+      />
+    ),
+    [navigation]
+  );
+
+  const keyExtractor = useCallback((item: Technique) => item.id, []);
+
+  const ListHeader = (
+    <>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Techniques</Text>
+        <Text style={styles.headerCount}>
+          {filtered.length} technique{filtered.length !== 1 ? "s" : ""}
+        </Text>
+      </View>
+
+      {/* Search */}
+      <View style={styles.searchContainer}>
+        <Ionicons
+          name="search-outline"
+          size={18}
+          color={colors.textMuted}
+          style={styles.searchIcon}
+        />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search techniques..."
+          placeholderTextColor={colors.textMuted}
+          value={search}
+          onChangeText={setSearch}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        {search.length > 0 && (
+          <TouchableOpacity onPress={() => setSearch("")}>
+            <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Category Pills - horizontal scroll */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.categoryScroll}
+        contentContainerStyle={styles.categoryScrollContent}
+      >
+        <CategoryPill
+          label="All"
+          active={activeCategory === null}
+          onPress={() => setActiveCategory(null)}
+        />
+        {CATEGORIES.map((cat) => (
+          <CategoryPill
+            key={cat}
+            label={cat}
+            active={activeCategory === cat}
+            onPress={() => toggleCategory(cat)}
+          />
+        ))}
+      </ScrollView>
+
+      {/* Difficulty Filters + Beginner Toggle */}
+      <View style={styles.filterRow}>
+        {(["beginner", "intermediate", "advanced"] as Difficulty[]).map(
+          (diff) => (
+            <DifficultyChip
+              key={diff}
+              label={difficultyLabel(diff)}
+              color={DIFFICULTY_COLORS[diff]}
+              active={activeDifficulty === diff}
+              onPress={() => toggleDifficulty(diff)}
+            />
+          )
+        )}
+        <TouchableOpacity
+          style={[
+            styles.beginnerToggle,
+            beginnerOnly && styles.beginnerToggleActive,
+          ]}
+          onPress={() => setBeginnerOnly((prev) => !prev)}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name="leaf-outline"
+            size={14}
+            color={beginnerOnly ? colors.green : colors.textMuted}
+          />
+          <Text
+            style={[
+              styles.beginnerToggleText,
+              beginnerOnly && styles.beginnerToggleTextActive,
+            ]}
+          >
+            Beginner
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </>
+  );
 
   if (loading) {
     return (
@@ -385,12 +525,12 @@ export default function TechniquesScreen() {
 
   return (
     <View style={styles.container}>
-      <SectionList
-        sections={sections}
-        keyExtractor={(item) => item.id}
+      <FlatList
+        data={filtered}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
-        stickySectionHeadersEnabled={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -399,79 +539,7 @@ export default function TechniquesScreen() {
             colors={[colors.accent]}
           />
         }
-        ListHeaderComponent={
-          <>
-            {/* Header */}
-            <View style={styles.header}>
-              <Text style={styles.headerTitle}>Techniques</Text>
-              <Text style={styles.headerCount}>
-                {filtered.length} technique{filtered.length !== 1 ? "s" : ""}
-              </Text>
-            </View>
-
-            {/* Search */}
-            <View style={styles.searchContainer}>
-              <Text style={styles.searchIcon}>{"\u{1F50D}"}</Text>
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search techniques..."
-                placeholderTextColor={colors.textMuted}
-                value={search}
-                onChangeText={setSearch}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              {search.length > 0 && (
-                <TouchableOpacity onPress={() => setSearch("")}>
-                  <Text style={styles.clearButton}>{"\u{2715}"}</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Category Filters */}
-            {categories.length > 0 && (
-              <View style={styles.filterRow}>
-                {categories.map((cat) => (
-                  <FilterChip
-                    key={cat}
-                    label={cat}
-                    active={activeCategory === cat}
-                    onPress={() => toggleCategory(cat)}
-                  />
-                ))}
-              </View>
-            )}
-
-            {/* Difficulty Filters */}
-            <View style={styles.filterRow}>
-              {(["beginner", "intermediate", "advanced"] as Difficulty[]).map(
-                (diff) => (
-                  <FilterChip
-                    key={diff}
-                    label={difficultyLabel(diff)}
-                    active={activeDifficulty === diff}
-                    onPress={() => toggleDifficulty(diff)}
-                  />
-                )
-              )}
-            </View>
-          </>
-        }
-        renderSectionHeader={({ section: { title, data } }) => (
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionIcon}>{categoryIcon(title)}</Text>
-            <Text style={styles.sectionTitle}>{title}</Text>
-            <Text style={styles.sectionCount}>{data.length}</Text>
-          </View>
-        )}
-        renderItem={({ item }) => (
-          <TechniqueCard
-            technique={item}
-            onPress={() =>
-              navigation.navigate("TechniqueDetail", { technique: item })
-            }
-          />
-        )}
+        ListHeaderComponent={ListHeader}
         ListEmptyComponent={<EmptyState hasFilters={hasFilters} />}
       />
     </View>
@@ -517,7 +585,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.searchBg,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
@@ -525,7 +593,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   searchIcon: {
-    fontSize: 15,
     marginRight: 8,
   },
   searchInput: {
@@ -535,10 +602,14 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     paddingVertical: 12,
   },
-  clearButton: {
-    fontSize: 14,
-    color: colors.textMuted,
-    paddingLeft: 8,
+
+  // Category scroll
+  categoryScroll: {
+    marginHorizontal: -20,
+    marginBottom: 12,
+  },
+  categoryScrollContent: {
+    paddingHorizontal: 20,
   },
 
   // Filters
@@ -546,31 +617,31 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-    marginBottom: 12,
+    marginBottom: 16,
   },
 
-  // Section headers
-  sectionHeader: {
+  // Beginner toggle
+  beginnerToggle: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingTop: 12,
-    paddingBottom: 10,
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  sectionIcon: {
-    fontSize: 16,
+  beginnerToggleActive: {
+    backgroundColor: hexToRgba(colors.green, 0.15),
+    borderColor: colors.green,
   },
-  sectionTitle: {
+  beginnerToggleText: {
     fontFamily: "DMSans_500Medium",
     fontSize: 13,
     color: colors.textMuted,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    flex: 1,
   },
-  sectionCount: {
-    fontFamily: "DMSans_400Regular",
-    fontSize: 12,
-    color: colors.textMuted,
+  beginnerToggleTextActive: {
+    color: colors.green,
   },
 });

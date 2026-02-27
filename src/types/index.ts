@@ -74,3 +74,11 @@ export interface Session {
   taps_received: number;
   created_at: string;
 }
+
+export interface TechniqueNote {
+  id: string;
+  user_id: string;
+  technique_id: string;
+  notes: string | null;
+  updated_at: string;
+}

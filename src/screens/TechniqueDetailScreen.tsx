@@ -1,14 +1,21 @@
-import React from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  TextInput,
   Linking,
+  ActivityIndicator,
+  Platform,
+  KeyboardAvoidingView,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { Difficulty } from "../types";
+import { supabase } from "../lib/supabase";
+import { useSession } from "../hooks/useSession";
+import type { Difficulty, TechniqueNote } from "../types";
 import type { TechniquesStackParamList } from "../navigation";
 
 // --- Theme ---
@@ -19,6 +26,7 @@ const colors = {
   surfaceRaised: "#1A1A26",
   accent: "#C41E3A",
   gold: "#C9A84C",
+  green: "#2D8E4E",
   textPrimary: "#FFFFFF",
   textSecondary: "#9A9AA0",
   textMuted: "#5A5A64",
@@ -58,48 +66,68 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+const serifFont = Platform.select({
+  ios: "Georgia",
+  android: "serif",
+  default: "serif",
+});
+
 // --- Types ---
 
 type Props = NativeStackScreenProps<TechniquesStackParamList, "TechniqueDetail">;
-
-// --- Info Row ---
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={infoStyles.row}>
-      <Text style={infoStyles.label}>{label}</Text>
-      <Text style={infoStyles.value}>{value}</Text>
-    </View>
-  );
-}
-
-const infoStyles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  label: {
-    fontFamily: "DMSans_400Regular",
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  value: {
-    fontFamily: "DMSans_500Medium",
-    fontSize: 14,
-    color: colors.textPrimary,
-  },
-});
 
 // --- Main Screen ---
 
 export default function TechniqueDetailScreen({ navigation, route }: Props) {
   const { technique } = route.params;
+  const { session } = useSession();
   const diffColor =
     DIFFICULTY_COLORS[technique.difficulty] || colors.textMuted;
+
+  // Notes state
+  const [notesText, setNotesText] = useState("");
+  const [notesLoading, setNotesLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const fetchNotes = useCallback(async () => {
+    if (!session?.user?.id) {
+      setNotesLoading(false);
+      return;
+    }
+    const { data } = await supabase
+      .from("technique_notes")
+      .select("*")
+      .eq("user_id", session.user.id)
+      .eq("technique_id", technique.id)
+      .maybeSingle();
+
+    if (data) {
+      const note = data as TechniqueNote;
+      setNotesText(note.notes || "");
+    }
+    setNotesLoading(false);
+  }, [session?.user?.id, technique.id]);
+
+  useEffect(() => {
+    fetchNotes();
+  }, [fetchNotes]);
+
+  const saveNotes = async () => {
+    if (!session?.user?.id) return;
+    setSaving(true);
+
+    await supabase.from("technique_notes").upsert(
+      {
+        user_id: session.user.id,
+        technique_id: technique.id,
+        notes: notesText.trim() || null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,technique_id" }
+    );
+
+    setSaving(false);
+  };
 
   const handleVideoPress = () => {
     if (technique.video_url) {
@@ -109,81 +137,147 @@ export default function TechniqueDetailScreen({ navigation, route }: Props) {
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={0}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          >
-            <Text style={styles.backText}>{"\u{2190}"} Back</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Title area */}
-        <View style={styles.titleArea}>
-          <Text style={styles.categoryIcon}>
-            {categoryIcon(technique.category)}
-          </Text>
-          <Text style={styles.name}>{technique.name}</Text>
-          <View style={styles.metaRow}>
-            <View
-              style={[
-                styles.diffBadge,
-                { backgroundColor: hexToRgba(diffColor, 0.15) },
-              ]}
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              style={styles.backButton}
             >
-              <Text style={[styles.diffText, { color: diffColor }]}>
-                {difficultyLabel(technique.difficulty)}
-              </Text>
-            </View>
-            {technique.is_beginner && (
-              <View style={styles.beginnerBadge}>
-                <Text style={styles.beginnerText}>Beginner Friendly</Text>
+              <Ionicons
+                name="arrow-back"
+                size={20}
+                color={colors.textSecondary}
+              />
+              <Text style={styles.backText}>Back</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Title area */}
+          <View style={styles.titleArea}>
+            <Text style={styles.categoryEmoji}>
+              {categoryIcon(technique.category)}
+            </Text>
+            <Text style={styles.name}>{technique.name}</Text>
+
+            {/* Badge row */}
+            <View style={styles.badgeRow}>
+              <View style={styles.categoryBadge}>
+                <Text style={styles.categoryBadgeText}>
+                  {technique.category}
+                </Text>
               </View>
+              <View
+                style={[
+                  styles.diffBadge,
+                  { backgroundColor: hexToRgba(diffColor, 0.15) },
+                ]}
+              >
+                <View
+                  style={[styles.diffDot, { backgroundColor: diffColor }]}
+                />
+                <Text style={[styles.diffText, { color: diffColor }]}>
+                  {difficultyLabel(technique.difficulty)}
+                </Text>
+              </View>
+              {technique.is_beginner && (
+                <View style={styles.beginnerBadge}>
+                  <Ionicons
+                    name="leaf-outline"
+                    size={12}
+                    color={colors.green}
+                  />
+                  <Text style={styles.beginnerText}>Beginner</Text>
+                </View>
+              )}
+            </View>
+
+            {/* Subcategory */}
+            {technique.subcategory && (
+              <Text style={styles.subcategory}>{technique.subcategory}</Text>
             )}
           </View>
-        </View>
 
-        {/* Details card */}
-        <View style={styles.detailCard}>
-          <InfoRow label="Category" value={technique.category} />
-          {technique.subcategory && (
-            <InfoRow label="Subcategory" value={technique.subcategory} />
-          )}
-          <InfoRow
-            label="Difficulty"
-            value={difficultyLabel(technique.difficulty)}
-          />
-        </View>
-
-        {/* Description */}
-        {technique.description && (
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Description</Text>
-            <View style={styles.descriptionCard}>
+          {/* Description */}
+          {technique.description && (
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Description</Text>
               <Text style={styles.descriptionText}>
                 {technique.description}
               </Text>
             </View>
-          </View>
-        )}
+          )}
 
-        {/* Video link */}
-        {technique.video_url && (
-          <TouchableOpacity
-            style={styles.videoButton}
-            onPress={handleVideoPress}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.videoIcon}>{"\u{25B6}\u{FE0F}"}</Text>
-            <Text style={styles.videoText}>Watch Video</Text>
-          </TouchableOpacity>
-        )}
-      </ScrollView>
+          {/* Video link */}
+          {technique.video_url && (
+            <TouchableOpacity
+              style={styles.videoButton}
+              onPress={handleVideoPress}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="play-circle" size={20} color={colors.textPrimary} />
+              <Text style={styles.videoText}>Watch Video</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Personal Notes */}
+          {session?.user && (
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Your Notes</Text>
+              {notesLoading ? (
+                <ActivityIndicator
+                  size="small"
+                  color={colors.accent}
+                  style={styles.notesLoader}
+                />
+              ) : (
+                <>
+                  <View style={styles.notesCard}>
+                    <TextInput
+                      style={styles.notesInput}
+                      placeholder="Add personal notes about this technique..."
+                      placeholderTextColor={colors.textMuted}
+                      value={notesText}
+                      onChangeText={setNotesText}
+                      multiline
+                      textAlignVertical="top"
+                    />
+                  </View>
+                  <TouchableOpacity
+                    style={styles.saveButton}
+                    onPress={saveNotes}
+                    activeOpacity={0.8}
+                    disabled={saving}
+                  >
+                    {saving ? (
+                      <ActivityIndicator size="small" color={colors.textPrimary} />
+                    ) : (
+                      <>
+                        <Ionicons
+                          name="save-outline"
+                          size={16}
+                          color={colors.textPrimary}
+                        />
+                        <Text style={styles.saveButtonText}>Save Notes</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -192,6 +286,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  flex: {
+    flex: 1,
   },
   scroll: {
     paddingHorizontal: 20,
@@ -202,6 +299,11 @@ const styles = StyleSheet.create({
   header: {
     paddingTop: 60,
     paddingBottom: 8,
+  },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   backText: {
     fontFamily: "DMSans_500Medium",
@@ -215,52 +317,71 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 28,
   },
-  categoryIcon: {
-    fontSize: 40,
-    marginBottom: 12,
+  categoryEmoji: {
+    fontSize: 48,
+    marginBottom: 16,
   },
   name: {
-    fontFamily: "DMSans_700Bold",
-    fontSize: 24,
+    fontFamily: serifFont,
+    fontSize: 28,
     color: colors.textPrimary,
     textAlign: "center",
-    marginBottom: 12,
+    marginBottom: 16,
+    fontWeight: "700",
   },
-  metaRow: {
+  badgeRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
     gap: 8,
   },
-  diffBadge: {
+  categoryBadge: {
+    backgroundColor: hexToRgba(colors.accent, 0.15),
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 10,
+  },
+  categoryBadgeText: {
+    fontFamily: "DMSans_500Medium",
+    fontSize: 13,
+    color: colors.accent,
+  },
+  diffBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  diffDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   diffText: {
     fontFamily: "DMSans_500Medium",
     fontSize: 13,
   },
   beginnerBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 10,
-    backgroundColor: colors.surfaceRaised,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: hexToRgba(colors.green, 0.15),
   },
   beginnerText: {
     fontFamily: "DMSans_500Medium",
     fontSize: 13,
-    color: colors.textSecondary,
+    color: colors.green,
   },
-
-  // Detail card
-  detailCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: 24,
+  subcategory: {
+    fontFamily: "DMSans_400Regular",
+    fontSize: 14,
+    color: colors.textMuted,
+    marginTop: 10,
   },
 
   // Sections
@@ -275,18 +396,11 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginBottom: 10,
   },
-  descriptionCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
   descriptionText: {
     fontFamily: "DMSans_400Regular",
-    fontSize: 15,
+    fontSize: 16,
     color: colors.textSecondary,
-    lineHeight: 24,
+    lineHeight: 26,
   },
 
   // Video
@@ -298,13 +412,47 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     borderRadius: 14,
     paddingVertical: 16,
-  },
-  videoIcon: {
-    fontSize: 16,
+    marginBottom: 24,
   },
   videoText: {
     fontFamily: "DMSans_700Bold",
     fontSize: 16,
+    color: colors.textPrimary,
+  },
+
+  // Notes
+  notesLoader: {
+    paddingVertical: 20,
+  },
+  notesCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
+    marginBottom: 12,
+  },
+  notesInput: {
+    fontFamily: "DMSans_400Regular",
+    fontSize: 15,
+    color: colors.textPrimary,
+    minHeight: 100,
+    lineHeight: 22,
+  },
+  saveButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: 12,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  saveButtonText: {
+    fontFamily: "DMSans_500Medium",
+    fontSize: 15,
     color: colors.textPrimary,
   },
 });
