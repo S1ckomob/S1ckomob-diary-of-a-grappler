@@ -15,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../hooks/useSession";
-import type { Difficulty, TechniqueNote } from "../types";
+import type { Technique, Difficulty, TechniqueNote } from "../types";
 import type { TechniquesStackParamList } from "../navigation";
 
 // --- Theme (prototype-exact) ---
@@ -82,8 +82,26 @@ type Props = NativeStackScreenProps<TechniquesStackParamList, "TechniqueDetail">
 // --- Main Screen ---
 
 export default function TechniqueDetailScreen({ navigation, route }: Props) {
-  const { technique } = route.params;
+  const { technique: initialTechnique } = route.params;
   const { session } = useSession();
+
+  // Re-fetch full technique from Supabase to get all columns (steps, key_details, etc.)
+  const [technique, setTechnique] = useState<Technique>(initialTechnique);
+
+  const fetchTechnique = useCallback(async () => {
+    const { data } = await supabase
+      .from("techniques")
+      .select("*")
+      .eq("id", initialTechnique.id)
+      .single();
+
+    if (data) setTechnique(data as Technique);
+  }, [initialTechnique.id]);
+
+  useEffect(() => {
+    fetchTechnique();
+  }, [fetchTechnique]);
+
   const diffColor =
     DIFFICULTY_COLORS[technique.difficulty] || colors.textMuted;
   const catColor = CATEGORY_COLORS[technique.category] || colors.textMuted;
