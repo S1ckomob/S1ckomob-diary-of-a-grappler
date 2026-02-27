@@ -13,6 +13,9 @@ import ProfileScreen from "../screens/ProfileScreen";
 import EditProfileScreen from "../screens/EditProfileScreen";
 import TechniquesScreen from "../screens/TechniquesScreen";
 import TechniqueDetailScreen from "../screens/TechniqueDetailScreen";
+import CoachScreen from "../screens/CoachScreen";
+import JoinGymScreen from "../screens/JoinGymScreen";
+import AddGoalScreen from "../screens/AddGoalScreen";
 import type { Technique } from "../types";
 
 export type AuthStackParamList = {
@@ -36,6 +39,12 @@ export type TechniquesStackParamList = {
   TechniqueDetail: { technique: Technique };
 };
 
+export type CoachStackParamList = {
+  CoachHome: undefined;
+  JoinGym: undefined;
+  AddGoal: undefined;
+};
+
 // --- Placeholder tab screens ---
 
 function PlaceholderScreen({ name }: { name: string }) {
@@ -44,10 +53,6 @@ function PlaceholderScreen({ name }: { name: string }) {
       <Text style={styles.text}>{name}</Text>
     </View>
   );
-}
-
-function CoachScreen() {
-  return <PlaceholderScreen name="Coach" />;
 }
 
 function CommunityScreen() {
@@ -61,6 +66,7 @@ const AuthStack_ = createNativeStackNavigator<AuthStackParamList>();
 const JournalStack = createNativeStackNavigator<JournalStackParamList>();
 const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
 const TechniquesStack_ = createNativeStackNavigator<TechniquesStackParamList>();
+const CoachStack_ = createNativeStackNavigator<CoachStackParamList>();
 
 function JournalStackScreen() {
   return (
@@ -87,6 +93,24 @@ function TechniquesStackScreen() {
         component={TechniqueDetailScreen}
       />
     </TechniquesStack_.Navigator>
+  );
+}
+
+function CoachStackScreen() {
+  return (
+    <CoachStack_.Navigator screenOptions={{ headerShown: false }}>
+      <CoachStack_.Screen name="CoachHome" component={CoachScreen} />
+      <CoachStack_.Screen
+        name="JoinGym"
+        component={JoinGymScreen}
+        options={{ presentation: "modal", animation: "slide_from_bottom" }}
+      />
+      <CoachStack_.Screen
+        name="AddGoal"
+        component={AddGoalScreen}
+        options={{ presentation: "modal", animation: "slide_from_bottom" }}
+      />
+    </CoachStack_.Navigator>
   );
 }
 
@@ -122,7 +146,7 @@ function MainTabs() {
     >
       <Tab.Screen name="Journal" component={JournalStackScreen} />
       <Tab.Screen name="Techniques" component={TechniquesStackScreen} />
-      <Tab.Screen name="Coach" component={CoachScreen} />
+      <Tab.Screen name="Coach" component={CoachStackScreen} />
       <Tab.Screen name="Community" component={CommunityScreen} />
       <Tab.Screen name="Profile" component={ProfileStackScreen} />
     </Tab.Navigator>

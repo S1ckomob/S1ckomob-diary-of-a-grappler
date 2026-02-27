@@ -34,6 +34,31 @@ export interface Technique {
   created_at: string;
 }
 
+export interface Gym {
+  id: string;
+  name: string;
+  code: string;
+  coach_id: string | null;
+  plan: string;
+  created_at: string;
+}
+
+export interface Goal {
+  id: string;
+  user_id: string;
+  goal_type: string;
+  description: string | null;
+  target: number | null;
+  current: number;
+  unit: string | null;
+  month: number;
+  year: number;
+  set_by_coach: boolean;
+  coach_note: string | null;
+  completed: boolean;
+  created_at: string;
+}
+
 export type SessionType = "rolling" | "drilling" | "competition";
 
 export interface Session {
