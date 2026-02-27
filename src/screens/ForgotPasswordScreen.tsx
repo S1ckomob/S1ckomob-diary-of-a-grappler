@@ -28,12 +28,20 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
-    setLoading(false);
-    if (error) {
-      Alert.alert("Error", error.message);
-    } else {
-      setSent(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+      if (error) {
+        Alert.alert("Error", error.message);
+      } else {
+        setSent(true);
+      }
+    } catch (e: any) {
+      Alert.alert(
+        "Error",
+        e?.message || "Something went wrong. Please try again."
+      );
+    } finally {
+      setLoading(false);
     }
   }
 

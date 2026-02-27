@@ -31,47 +31,62 @@ export default function LoginScreen({ navigation }: Props) {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
-    setLoading(false);
-    if (error) Alert.alert("Sign In Error", error.message);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (error) Alert.alert("Sign In Error", error.message);
+    } catch (e: any) {
+      Alert.alert(
+        "Sign In Error",
+        e?.message || "Something went wrong. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleGoogleSignIn() {
     setLoading(true);
-    const redirectUri = makeRedirectUri();
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: redirectUri },
-    });
-    if (error) {
-      setLoading(false);
-      Alert.alert("Google Sign In Error", error.message);
-      return;
-    }
-    if (data.url) {
-      const result = await WebBrowser.openAuthSessionAsync(
-        data.url,
-        redirectUri
-      );
-      if (result.type === "success" && result.url) {
-        const url = new URL(result.url);
-        const params = new URLSearchParams(
-          url.hash ? url.hash.substring(1) : url.search.substring(1)
+    try {
+      const redirectUri = makeRedirectUri();
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: redirectUri },
+      });
+      if (error) {
+        Alert.alert("Google Sign In Error", error.message);
+        return;
+      }
+      if (data.url) {
+        const result = await WebBrowser.openAuthSessionAsync(
+          data.url,
+          redirectUri
         );
-        const accessToken = params.get("access_token");
-        const refreshToken = params.get("refresh_token");
-        if (accessToken && refreshToken) {
-          await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
+        if (result.type === "success" && result.url) {
+          const url = new URL(result.url);
+          const params = new URLSearchParams(
+            url.hash ? url.hash.substring(1) : url.search.substring(1)
+          );
+          const accessToken = params.get("access_token");
+          const refreshToken = params.get("refresh_token");
+          if (accessToken && refreshToken) {
+            await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+          }
         }
       }
+    } catch (e: any) {
+      Alert.alert(
+        "Google Sign In Error",
+        e?.message || "Something went wrong. Please try again."
+      );
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   async function handleAppleSignIn() {

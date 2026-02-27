@@ -33,16 +33,28 @@ export default function SignUpScreen({ navigation }: Props) {
       Alert.alert("Error", "Passwords do not match.");
       return;
     }
+    if (password.length < 6) {
+      Alert.alert("Error", "Password must be at least 6 characters.");
+      return;
+    }
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-    });
-    setLoading(false);
-    if (error) {
-      Alert.alert("Sign Up Error", error.message);
-    } else {
-      setSuccess(true);
+    try {
+      const { error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+      });
+      if (error) {
+        Alert.alert("Sign Up Error", error.message);
+      } else {
+        setSuccess(true);
+      }
+    } catch (e: any) {
+      Alert.alert(
+        "Sign Up Error",
+        e?.message || "Something went wrong. Please try again."
+      );
+    } finally {
+      setLoading(false);
     }
   }
 
