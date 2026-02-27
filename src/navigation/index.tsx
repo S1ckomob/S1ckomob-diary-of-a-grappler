@@ -21,6 +21,7 @@ import AICoachScreen from "../screens/AICoachScreen";
 import JoinGymScreen from "../screens/JoinGymScreen";
 import AddGoalScreen from "../screens/AddGoalScreen";
 import ProgressScreen from "../screens/ProgressScreen";
+import SettingsScreen from "../screens/SettingsScreen";
 import CompetitionsScreen from "../screens/CompetitionsScreen";
 import AddCompetitionScreen from "../screens/AddCompetitionScreen";
 import EditCompetitionScreen from "../screens/EditCompetitionScreen";
@@ -43,6 +44,7 @@ export type JournalStackParamList = {
 export type ProfileStackParamList = {
   ProfileHome: undefined;
   EditProfile: undefined;
+  Settings: undefined;
 };
 
 export type TechniquesStackParamList = {
@@ -167,6 +169,7 @@ function ProfileStackScreen() {
         component={EditProfileScreen}
         options={{ presentation: "modal", animation: "slide_from_bottom" }}
       />
+      <ProfileStack.Screen name="Settings" component={SettingsScreen} />
     </ProfileStack.Navigator>
   );
 }
@@ -307,6 +310,7 @@ const linking: any = {
         screens: {
           ProfileHome: "profile",
           EditProfile: "edit-profile",
+          Settings: "settings",
         },
       },
     },

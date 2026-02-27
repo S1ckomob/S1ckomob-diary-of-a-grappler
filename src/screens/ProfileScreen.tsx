@@ -621,6 +621,16 @@ export default function ProfileScreen() {
           <Text style={styles.editProfileText}>Edit Profile</Text>
         </TouchableOpacity>
 
+        {/* Settings */}
+        <TouchableOpacity
+          style={styles.settingsButton}
+          onPress={() => navigation.navigate("Settings")}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="settings-outline" size={18} color={colors.textPrimary} />
+          <Text style={styles.editProfileText}>Settings</Text>
+        </TouchableOpacity>
+
         {/* Sign Out */}
         <TouchableOpacity
           style={styles.signOutButton}
@@ -809,6 +819,18 @@ const styles = StyleSheet.create({
     fontFamily: "DMSans_500Medium",
     fontSize: 16,
     color: colors.textPrimary,
+  },
+  settingsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderRadius: 14,
+    paddingVertical: 16,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 12,
   },
 
   // Sign out

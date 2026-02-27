@@ -18,6 +18,14 @@ export interface Profile {
   unit_system: string;
   training_goals: string | null;
   bio: string | null;
+  notify_training_reminders: boolean;
+  notify_streak_alerts: boolean;
+  notify_coach_messages: boolean;
+  notify_comp_reminders: boolean;
+  profile_visible: boolean;
+  default_session_type: string;
+  default_duration: number;
+  subscription_plan: string;
   created_at: string;
 }
 
