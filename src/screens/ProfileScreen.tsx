@@ -189,6 +189,7 @@ export default function ProfileScreen() {
   }, [authSession?.user]);
 
   useEffect(() => {
+    fetchData();
     const unsubscribe = navigation.addListener("focus", () => {
       fetchData();
     });

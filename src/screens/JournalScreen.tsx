@@ -353,8 +353,9 @@ export default function JournalScreen() {
     setLoading(false);
   }, [authSession?.user]);
 
-  // Refetch whenever this screen comes into focus (e.g. after logging a session)
+  // Fetch on mount / when auth becomes available, and refetch on screen focus
   useEffect(() => {
+    fetchData();
     const unsubscribe = navigation.addListener("focus", () => {
       fetchData();
     });

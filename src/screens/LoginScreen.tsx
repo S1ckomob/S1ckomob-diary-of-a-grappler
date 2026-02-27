@@ -129,7 +129,7 @@ export default function LoginScreen({ navigation }: Props) {
         <TextInput
           style={styles.input}
           placeholder="Email"
-          placeholderTextColor="#8E8E93"
+          placeholderTextColor="#5A5A64"
           autoCapitalize="none"
           keyboardType="email-address"
           value={email}
@@ -138,7 +138,7 @@ export default function LoginScreen({ navigation }: Props) {
         <TextInput
           style={styles.input}
           placeholder="Password"
-          placeholderTextColor="#8E8E93"
+          placeholderTextColor="#5A5A64"
           secureTextEntry
           value={password}
           onChangeText={setPassword}
@@ -202,7 +202,7 @@ export default function LoginScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#08080D",
   },
   scroll: {
     flexGrow: 1,
@@ -213,31 +213,31 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: "DMSans_700Bold",
     fontSize: 28,
-    color: "#1C1C1E",
+    color: "#FFFFFF",
     textAlign: "center",
     marginBottom: 8,
   },
   subtitle: {
     fontFamily: "DMSans_400Regular",
     fontSize: 16,
-    color: "#8E8E93",
+    color: "#9A9AA0",
     textAlign: "center",
     marginBottom: 32,
   },
   input: {
     fontFamily: "DMSans_400Regular",
     fontSize: 16,
-    color: "#1C1C1E",
-    backgroundColor: "#F5F5F7",
+    color: "#FFFFFF",
+    backgroundColor: "#11111A",
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#E5E5EA",
+    borderColor: "#1E1E2A",
   },
   primaryButton: {
-    backgroundColor: "#1A73E8",
+    backgroundColor: "#C41E3A",
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
   link: {
     fontFamily: "DMSans_500Medium",
     fontSize: 14,
-    color: "#1A73E8",
+    color: "#C41E3A",
     textAlign: "center",
     marginBottom: 24,
   },
@@ -264,12 +264,12 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: "#E5E5EA",
+    backgroundColor: "#1E1E2A",
   },
   dividerText: {
     fontFamily: "DMSans_400Regular",
     fontSize: 14,
-    color: "#8E8E93",
+    color: "#5A5A64",
     marginHorizontal: 16,
   },
   socialButton: {
@@ -278,30 +278,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#E5E5EA",
-    backgroundColor: "#FFFFFF",
+    borderColor: "#1E1E2A",
+    backgroundColor: "#11111A",
   },
   socialButtonText: {
     fontFamily: "DMSans_500Medium",
     fontSize: 16,
-    color: "#1C1C1E",
+    color: "#FFFFFF",
   },
   appleButton: {
-    backgroundColor: "#000000",
-    borderColor: "#000000",
+    backgroundColor: "#FFFFFF",
+    borderColor: "#FFFFFF",
   },
   appleButtonText: {
-    color: "#FFFFFF",
+    color: "#000000",
   },
   bottomText: {
     fontFamily: "DMSans_400Regular",
     fontSize: 14,
-    color: "#8E8E93",
+    color: "#9A9AA0",
     textAlign: "center",
     marginTop: 24,
   },
   bottomLink: {
     fontFamily: "DMSans_500Medium",
-    color: "#1A73E8",
+    color: "#C41E3A",
   },
 });

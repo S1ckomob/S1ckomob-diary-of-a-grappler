@@ -423,6 +423,7 @@ export default function CoachScreen() {
   }, [authSession?.user, currentMonth, currentYear]);
 
   useEffect(() => {
+    fetchData();
     const unsubscribe = navigation.addListener("focus", () => {
       fetchData();
     });
