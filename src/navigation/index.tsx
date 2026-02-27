@@ -3,6 +3,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { View, StyleSheet, ActivityIndicator } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useSession } from "../hooks/useSession";
 import LoginScreen from "../screens/LoginScreen";
 import SignUpScreen from "../screens/SignUpScreen";
@@ -131,11 +132,51 @@ function MainTabs() {
         },
       }}
     >
-      <Tab.Screen name="Journal" component={JournalStackScreen} />
-      <Tab.Screen name="Techniques" component={TechniquesStackScreen} />
-      <Tab.Screen name="Coach" component={CoachStackScreen} />
-      <Tab.Screen name="Community" component={CommunityScreen} />
-      <Tab.Screen name="Profile" component={ProfileStackScreen} />
+      <Tab.Screen
+        name="Journal"
+        component={JournalStackScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="book-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Techniques"
+        component={TechniquesStackScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="bulb-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Coach"
+        component={CoachStackScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="flag-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Community"
+        component={CommunityScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="people-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileStackScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person-outline" size={size} color={color} />
+          ),
+        }}
+      />
     </Tab.Navigator>
   );
 }
