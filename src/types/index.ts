@@ -29,6 +29,10 @@ export interface Technique {
   category: string;
   subcategory: string | null;
   description: string | null;
+  steps: string | null;
+  key_details: string | null;
+  common_mistakes: string | null;
+  positions_from: string | null;
   difficulty: Difficulty;
   is_beginner: boolean;
   video_url: string | null;

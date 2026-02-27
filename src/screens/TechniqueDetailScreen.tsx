@@ -221,6 +221,70 @@ export default function TechniqueDetailScreen({ navigation, route }: Props) {
             </View>
           )}
 
+          {/* Positions From */}
+          {technique.positions_from && (
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Positions From</Text>
+              <View style={styles.contentCard}>
+                <View style={styles.positionsRow}>
+                  {technique.positions_from.split(",").map((pos, i) => (
+                    <View key={i} style={styles.positionPill}>
+                      <Ionicons name="navigate-outline" size={11} color={colors.textBody} />
+                      <Text style={styles.positionText}>{pos.trim()}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* Steps */}
+          {technique.steps && (
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Steps</Text>
+              <View style={styles.contentCard}>
+                {technique.steps.split("\n").map((step, i) => (
+                  <View key={i} style={styles.stepRow}>
+                    <View style={styles.stepNumber}>
+                      <Text style={styles.stepNumberText}>{i + 1}</Text>
+                    </View>
+                    <Text style={styles.stepText}>{step.replace(/^\d+\.\s*/, "")}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Key Details */}
+          {technique.key_details && (
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Key Details</Text>
+              <View style={styles.contentCard}>
+                {technique.key_details.split("\n").map((detail, i) => (
+                  <View key={i} style={styles.bulletRow}>
+                    <Ionicons name="checkmark-circle" size={14} color={colors.green} />
+                    <Text style={styles.bulletText}>{detail.replace(/^[-•]\s*/, "")}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Common Mistakes */}
+          {technique.common_mistakes && (
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Common Mistakes</Text>
+              <View style={[styles.contentCard, styles.mistakesCard]}>
+                {technique.common_mistakes.split("\n").map((mistake, i) => (
+                  <View key={i} style={styles.bulletRow}>
+                    <Ionicons name="alert-circle" size={14} color={colors.accent} />
+                    <Text style={styles.bulletText}>{mistake.replace(/^[-•]\s*/, "")}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
           {/* Video link */}
           {technique.video_url && (
             <TouchableOpacity
@@ -423,6 +487,77 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textBody,
     lineHeight: 24,
+  },
+
+  // Content cards (steps, key details, mistakes, positions)
+  contentCard: {
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  mistakesCard: {
+    borderColor: "rgba(196,30,58,0.15)",
+  },
+  stepRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    marginBottom: 14,
+  },
+  stepNumber: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 1,
+  },
+  stepNumberText: {
+    fontFamily: "DMSans_700Bold",
+    fontSize: 11,
+    color: colors.textBody,
+  },
+  stepText: {
+    flex: 1,
+    fontFamily: "DMSans_400Regular",
+    fontSize: 14,
+    color: colors.textBody,
+    lineHeight: 22,
+  },
+  bulletRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    marginBottom: 12,
+  },
+  bulletText: {
+    flex: 1,
+    fontFamily: "DMSans_400Regular",
+    fontSize: 14,
+    color: colors.textBody,
+    lineHeight: 22,
+  },
+  positionsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  positionPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
+  },
+  positionText: {
+    fontFamily: "DMSans_500Medium",
+    fontSize: 12,
+    color: colors.textBody,
   },
 
   // Video
