@@ -5,6 +5,8 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { View, StyleSheet, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSession } from "../hooks/useSession";
+import { useProfile } from "../hooks/useProfile";
+import OnboardingScreen from "../screens/OnboardingScreen";
 import LoginScreen from "../screens/LoginScreen";
 import SignUpScreen from "../screens/SignUpScreen";
 import ForgotPasswordScreen from "../screens/ForgotPasswordScreen";
@@ -194,9 +196,10 @@ function AuthStack() {
 // --- Root ---
 
 export default function Navigation() {
-  const { session, loading } = useSession();
+  const { session, loading: sessionLoading } = useSession();
+  const { profile, loading: profileLoading, refetch: refetchProfile } = useProfile(session);
 
-  if (loading) {
+  if (sessionLoading || (session && profileLoading)) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator size="large" color="#C41E3A" />
@@ -204,9 +207,17 @@ export default function Navigation() {
     );
   }
 
+  const needsOnboarding = session && (!profile || profile.name === null);
+
   return (
     <NavigationContainer>
-      {session ? <MainTabs /> : <AuthStack />}
+      {!session ? (
+        <AuthStack />
+      ) : needsOnboarding ? (
+        <OnboardingScreen userId={session.user.id} onComplete={refetchProfile} />
+      ) : (
+        <MainTabs />
+      )}
     </NavigationContainer>
   );
 }
