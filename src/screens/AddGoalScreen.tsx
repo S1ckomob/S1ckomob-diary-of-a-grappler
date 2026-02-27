@@ -55,13 +55,14 @@ export default function AddGoalScreen({ navigation }: Props) {
   const [goalType, setGoalType] = useState("Sessions");
   const [description, setDescription] = useState("");
   const [target, setTarget] = useState("");
+  const [customUnit, setCustomUnit] = useState("");
   const [saving, setSaving] = useState(false);
 
   const now = new Date();
   const currentMonth = now.getMonth() + 1;
   const currentYear = now.getFullYear();
 
-  const unit = goalType === "Custom" ? "" : UNIT_MAP[goalType] || "";
+  const unit = goalType === "Custom" ? customUnit.trim() : UNIT_MAP[goalType] || "";
 
   const handleSave = async () => {
     if (!authSession?.user) return;
@@ -159,6 +160,21 @@ export default function AddGoalScreen({ navigation }: Props) {
             />
             {unit ? <Text style={styles.targetUnit}>{unit}</Text> : null}
           </View>
+
+          {/* Custom Unit */}
+          {goalType === "Custom" && (
+            <>
+              <Text style={styles.fieldLabel}>Unit (optional)</Text>
+              <TextInput
+                style={styles.unitInput}
+                placeholder="e.g. reps, rounds, hours"
+                placeholderTextColor={colors.textMuted}
+                value={customUnit}
+                onChangeText={setCustomUnit}
+                maxLength={20}
+              />
+            </>
+          )}
 
           {/* Description */}
           <Text style={styles.fieldLabel}>Description (optional)</Text>
@@ -294,6 +310,20 @@ const styles = StyleSheet.create({
     fontFamily: "DMSans_400Regular",
     fontSize: 15,
     color: colors.textMuted,
+  },
+
+  // Unit
+  unitInput: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontFamily: "DMSans_400Regular",
+    fontSize: 15,
+    color: colors.textPrimary,
+    marginBottom: 24,
   },
 
   // Description

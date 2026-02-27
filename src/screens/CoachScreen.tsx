@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../hooks/useSession";
 import type { Profile, Gym, Goal } from "../types";
@@ -42,49 +43,67 @@ function progressPercent(current: number, target: number | null): number {
   return Math.min(current / target, 1);
 }
 
+function isGoalComplete(goal: Goal): boolean {
+  return goal.completed || (goal.target !== null && goal.current >= goal.target);
+}
+
 // --- Goal Card ---
 
 function GoalCard({
   goal,
   onToggle,
+  onIncrement,
 }: {
   goal: Goal;
   onToggle: () => void;
+  onIncrement: () => void;
 }) {
   const pct = progressPercent(goal.current, goal.target);
-  const isComplete = goal.completed || (goal.target !== null && goal.current >= goal.target);
-  const barColor = isComplete ? colors.green : colors.gold;
+  const pctDisplay = Math.round(pct * 100);
+  const complete = isGoalComplete(goal);
+  const barColor = complete ? colors.green : pct >= 0.5 ? colors.gold : colors.accent;
 
   return (
-    <View style={goalStyles.container}>
+    <View style={[goalStyles.container, complete && goalStyles.containerComplete]}>
       <View style={goalStyles.header}>
         <TouchableOpacity
-          style={[goalStyles.check, isComplete && goalStyles.checkDone]}
+          style={[goalStyles.check, complete && goalStyles.checkDone]}
           onPress={onToggle}
           activeOpacity={0.7}
         >
-          {isComplete && <Text style={goalStyles.checkMark}>{"\u{2713}"}</Text>}
+          {complete && <Text style={goalStyles.checkMark}>{"\u{2713}"}</Text>}
         </TouchableOpacity>
         <View style={goalStyles.headerText}>
           <Text
             style={[
               goalStyles.type,
-              isComplete && goalStyles.typeComplete,
+              complete && goalStyles.typeComplete,
             ]}
           >
             {goal.goal_type}
           </Text>
           {goal.description && (
-            <Text style={goalStyles.description} numberOfLines={2}>
+            <Text
+              style={[goalStyles.description, complete && goalStyles.descComplete]}
+              numberOfLines={2}
+            >
               {goal.description}
             </Text>
           )}
         </View>
-        {goal.set_by_coach && (
-          <View style={goalStyles.coachBadge}>
-            <Text style={goalStyles.coachBadgeText}>Coach</Text>
-          </View>
-        )}
+        <View style={goalStyles.badges}>
+          {goal.set_by_coach && (
+            <View style={goalStyles.coachBadge}>
+              <Ionicons name="school" size={10} color={colors.gold} />
+              <Text style={goalStyles.coachBadgeText}>Coach</Text>
+            </View>
+          )}
+          {goal.target !== null && (
+            <Text style={[goalStyles.pctText, { color: barColor }]}>
+              {pctDisplay}%
+            </Text>
+          )}
+        </View>
       </View>
 
       {goal.target !== null && (
@@ -97,16 +116,28 @@ function GoalCard({
               ]}
             />
           </View>
-          <Text style={goalStyles.progressLabel}>
-            {goal.current} / {goal.target}
-            {goal.unit ? ` ${goal.unit}` : ""}
-          </Text>
+          <View style={goalStyles.progressLabelRow}>
+            <Text style={goalStyles.progressLabel}>
+              {goal.current} / {goal.target}
+              {goal.unit ? ` ${goal.unit}` : ""}
+            </Text>
+            {!complete && (
+              <TouchableOpacity
+                style={goalStyles.incrementButton}
+                onPress={onIncrement}
+                activeOpacity={0.7}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="add-circle" size={22} color={barColor} />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       )}
 
       {goal.coach_note && (
         <View style={goalStyles.noteRow}>
-          <Text style={goalStyles.noteIcon}>{"\u{1F4AC}"}</Text>
+          <Ionicons name="chatbubble" size={12} color={colors.textMuted} />
           <Text style={goalStyles.noteText}>{goal.coach_note}</Text>
         </View>
       )}
@@ -123,20 +154,23 @@ const goalStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  containerComplete: {
+    opacity: 0.7,
+  },
   header: {
     flexDirection: "row",
     alignItems: "flex-start",
   },
   check: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     borderWidth: 2,
     borderColor: colors.textMuted,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
-    marginTop: 2,
+    marginTop: 1,
   },
   checkDone: {
     borderColor: colors.green,
@@ -144,7 +178,7 @@ const goalStyles = StyleSheet.create({
   },
   checkMark: {
     color: colors.textPrimary,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
   },
   headerText: {
@@ -166,36 +200,59 @@ const goalStyles = StyleSheet.create({
     marginTop: 3,
     lineHeight: 19,
   },
+  descComplete: {
+    color: colors.textMuted,
+    textDecorationLine: "line-through",
+  },
+  badges: {
+    alignItems: "flex-end",
+    marginLeft: 8,
+    gap: 6,
+  },
   coachBadge: {
-    backgroundColor: colors.accent + "20",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: colors.gold + "18",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
-    marginLeft: 8,
   },
   coachBadgeText: {
     fontFamily: "DMSans_500Medium",
     fontSize: 11,
-    color: colors.accent,
+    color: colors.gold,
+  },
+  pctText: {
+    fontFamily: "DMSans_700Bold",
+    fontSize: 14,
   },
   progressSection: {
     marginTop: 12,
   },
   progressBar: {
-    height: 6,
-    borderRadius: 3,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: colors.surfaceRaised,
     overflow: "hidden",
     marginBottom: 6,
   },
   progressFill: {
-    height: 6,
-    borderRadius: 3,
+    height: 8,
+    borderRadius: 4,
+  },
+  progressLabelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   progressLabel: {
     fontFamily: "DMSans_400Regular",
     fontSize: 12,
     color: colors.textMuted,
+  },
+  incrementButton: {
+    padding: 2,
   },
   noteRow: {
     flexDirection: "row",
@@ -205,9 +262,6 @@ const goalStyles = StyleSheet.create({
     paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: colors.border,
-  },
-  noteIcon: {
-    fontSize: 13,
   },
   noteText: {
     fontFamily: "DMSans_400Regular",
@@ -365,6 +419,89 @@ const emptyStyles = StyleSheet.create({
   },
 });
 
+// --- Progress Summary Card ---
+
+function ProgressSummary({
+  total,
+  completed,
+}: {
+  total: number;
+  completed: number;
+}) {
+  if (total === 0) return null;
+  const pct = Math.round((completed / total) * 100);
+  const barColor = pct === 100 ? colors.green : pct >= 50 ? colors.gold : colors.accent;
+
+  return (
+    <View style={summaryStyles.container}>
+      <View style={summaryStyles.textRow}>
+        <View style={summaryStyles.left}>
+          <Text style={summaryStyles.pct}>{pct}%</Text>
+          <Text style={summaryStyles.label}>complete</Text>
+        </View>
+        <Text style={summaryStyles.count}>
+          {completed} of {total} goals done
+        </Text>
+      </View>
+      <View style={summaryStyles.track}>
+        <View
+          style={[
+            summaryStyles.fill,
+            { width: `${pct}%`, backgroundColor: barColor },
+          ]}
+        />
+      </View>
+    </View>
+  );
+}
+
+const summaryStyles = StyleSheet.create({
+  container: {
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 20,
+  },
+  textRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    marginBottom: 12,
+  },
+  left: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 6,
+  },
+  pct: {
+    fontFamily: "DMSans_700Bold",
+    fontSize: 28,
+    color: colors.textPrimary,
+  },
+  label: {
+    fontFamily: "DMSans_400Regular",
+    fontSize: 14,
+    color: colors.textMuted,
+  },
+  count: {
+    fontFamily: "DMSans_400Regular",
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  track: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.surfaceRaised,
+    overflow: "hidden",
+  },
+  fill: {
+    height: 8,
+    borderRadius: 4,
+  },
+});
+
 // --- Main Screen ---
 
 type CoachNav = NativeStackNavigationProp<CoachStackParamList, "CoachHome">;
@@ -440,11 +577,6 @@ export default function CoachScreen() {
     const newCompleted = !goal.completed;
     const newCurrent = newCompleted && goal.target ? goal.target : goal.current;
 
-    await supabase
-      .from("goals")
-      .update({ completed: newCompleted, current: newCurrent })
-      .eq("id", goal.id);
-
     setGoals((prev) =>
       prev.map((g) =>
         g.id === goal.id
@@ -452,11 +584,35 @@ export default function CoachScreen() {
           : g
       )
     );
+
+    await supabase
+      .from("goals")
+      .update({ completed: newCompleted, current: newCurrent })
+      .eq("id", goal.id);
   };
 
-  const completedCount = goals.filter(
-    (g) => g.completed || (g.target !== null && g.current >= g.target)
-  ).length;
+  const incrementGoal = async (goal: Goal) => {
+    if (!goal.target || goal.current >= goal.target) return;
+    const newCurrent = goal.current + 1;
+    const newCompleted = newCurrent >= goal.target;
+
+    setGoals((prev) =>
+      prev.map((g) =>
+        g.id === goal.id
+          ? { ...g, current: newCurrent, completed: newCompleted }
+          : g
+      )
+    );
+
+    await supabase
+      .from("goals")
+      .update({ current: newCurrent, completed: newCompleted })
+      .eq("id", goal.id);
+  };
+
+  // Separate active and completed
+  const activeGoals = goals.filter((g) => !isGoalComplete(g));
+  const completedGoals = goals.filter((g) => isGoalComplete(g));
 
   if (loading) {
     return (
@@ -500,9 +656,7 @@ export default function CoachScreen() {
               Get personalized BJJ advice based on your game DNA
             </Text>
           </View>
-          <View style={aiCardStyles.arrow}>
-            <Text style={aiCardStyles.arrowText}>{"\u{203A}"}</Text>
-          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.accent} />
         </TouchableOpacity>
 
         {/* Gym Section */}
@@ -512,34 +666,62 @@ export default function CoachScreen() {
           <NoGymState onJoin={() => navigation.navigate("JoinGym")} />
         )}
 
-        {/* Goals Section */}
+        {/* Goals Header */}
         <View style={styles.goalsHeader}>
           <View>
             <Text style={styles.sectionLabel}>
               {MONTH_NAMES[currentMonth - 1]} Goals
             </Text>
-            {goals.length > 0 && (
-              <Text style={styles.goalsProgress}>
-                {completedCount} of {goals.length} completed
-              </Text>
-            )}
           </View>
           <TouchableOpacity
+            style={styles.addGoalButton}
             onPress={() => navigation.navigate("AddGoal")}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            activeOpacity={0.7}
           >
-            <Text style={styles.addButton}>+ Add</Text>
+            <Ionicons name="add" size={16} color={colors.textPrimary} />
+            <Text style={styles.addGoalText}>Add Goal</Text>
           </TouchableOpacity>
         </View>
 
+        {/* Progress Summary */}
+        <ProgressSummary total={goals.length} completed={completedGoals.length} />
+
+        {/* Active Goals */}
         {goals.length > 0 ? (
-          goals.map((goal) => (
-            <GoalCard
-              key={goal.id}
-              goal={goal}
-              onToggle={() => toggleGoal(goal)}
-            />
-          ))
+          <>
+            {activeGoals.length > 0 && (
+              <>
+                <Text style={styles.subSectionLabel}>
+                  IN PROGRESS ({activeGoals.length})
+                </Text>
+                {activeGoals.map((goal) => (
+                  <GoalCard
+                    key={goal.id}
+                    goal={goal}
+                    onToggle={() => toggleGoal(goal)}
+                    onIncrement={() => incrementGoal(goal)}
+                  />
+                ))}
+              </>
+            )}
+
+            {/* Completed Goals */}
+            {completedGoals.length > 0 && (
+              <>
+                <Text style={styles.subSectionLabel}>
+                  COMPLETED ({completedGoals.length})
+                </Text>
+                {completedGoals.map((goal) => (
+                  <GoalCard
+                    key={goal.id}
+                    goal={goal}
+                    onToggle={() => toggleGoal(goal)}
+                    onIncrement={() => incrementGoal(goal)}
+                  />
+                ))}
+              </>
+            )}
+          </>
         ) : (
           <EmptyGoals />
         )}
@@ -586,14 +768,6 @@ const aiCardStyles = StyleSheet.create({
     marginTop: 3,
     lineHeight: 18,
   },
-  arrow: {
-    marginLeft: 8,
-  },
-  arrowText: {
-    fontSize: 24,
-    color: colors.accent,
-    fontWeight: "700",
-  },
 });
 
 const styles = StyleSheet.create({
@@ -627,7 +801,7 @@ const styles = StyleSheet.create({
   goalsHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
     marginBottom: 14,
   },
   sectionLabel: {
@@ -637,15 +811,28 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 1,
   },
-  goalsProgress: {
-    fontFamily: "DMSans_400Regular",
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginTop: 4,
+  addGoalButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: colors.accent,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
   },
-  addButton: {
+  addGoalText: {
     fontFamily: "DMSans_500Medium",
-    fontSize: 14,
-    color: colors.accent,
+    fontSize: 13,
+    color: colors.textPrimary,
+  },
+
+  // Sub-section
+  subSectionLabel: {
+    fontFamily: "DMSans_500Medium",
+    fontSize: 11,
+    color: colors.textMuted,
+    letterSpacing: 0.8,
+    marginBottom: 10,
+    marginTop: 4,
   },
 });
