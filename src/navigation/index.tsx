@@ -9,6 +9,8 @@ import SignUpScreen from "../screens/SignUpScreen";
 import ForgotPasswordScreen from "../screens/ForgotPasswordScreen";
 import JournalScreen from "../screens/JournalScreen";
 import LogSessionScreen from "../screens/LogSessionScreen";
+import ProfileScreen from "../screens/ProfileScreen";
+import EditProfileScreen from "../screens/EditProfileScreen";
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -19,6 +21,11 @@ export type AuthStackParamList = {
 export type JournalStackParamList = {
   JournalHome: undefined;
   LogSession: undefined;
+};
+
+export type ProfileStackParamList = {
+  ProfileHome: undefined;
+  EditProfile: undefined;
 };
 
 // --- Placeholder tab screens ---
@@ -43,15 +50,12 @@ function CommunityScreen() {
   return <PlaceholderScreen name="Community" />;
 }
 
-function ProfileScreen() {
-  return <PlaceholderScreen name="Profile" />;
-}
-
 // --- Navigators ---
 
 const Tab = createBottomTabNavigator();
 const AuthStack_ = createNativeStackNavigator<AuthStackParamList>();
 const JournalStack = createNativeStackNavigator<JournalStackParamList>();
+const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
 
 function JournalStackScreen() {
   return (
@@ -63,6 +67,19 @@ function JournalStackScreen() {
         options={{ presentation: "modal", animation: "slide_from_bottom" }}
       />
     </JournalStack.Navigator>
+  );
+}
+
+function ProfileStackScreen() {
+  return (
+    <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
+      <ProfileStack.Screen name="ProfileHome" component={ProfileScreen} />
+      <ProfileStack.Screen
+        name="EditProfile"
+        component={EditProfileScreen}
+        options={{ presentation: "modal", animation: "slide_from_bottom" }}
+      />
+    </ProfileStack.Navigator>
   );
 }
 
@@ -87,7 +104,7 @@ function MainTabs() {
       <Tab.Screen name="Techniques" component={TechniquesScreen} />
       <Tab.Screen name="Coach" component={CoachScreen} />
       <Tab.Screen name="Community" component={CommunityScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Profile" component={ProfileStackScreen} />
     </Tab.Navigator>
   );
 }
