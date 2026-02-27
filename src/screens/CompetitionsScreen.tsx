@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -145,196 +145,165 @@ const statsStyles = StyleSheet.create({
   },
 });
 
-// ===== 12-Month Competition Calendar =====
+// ===== 12-Month Horizontal Calendar Strip =====
 
-function CompCalendar({ comps }: { comps: Competition[] }) {
+type MonthKey = string; // "YYYY-MM"
+
+function buildMonthStrip() {
   const now = new Date();
-  const months: {
-    year: number;
-    month: number;
-    label: string;
-    shortYear: string;
-  }[] = [];
-
-  for (let i = 11; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+  const months: { key: MonthKey; year: number; month: number; label: string; shortYear: string }[] = [];
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     months.push({
+      key,
       year: d.getFullYear(),
       month: d.getMonth(),
       label: d.toLocaleDateString("en-US", { month: "short" }),
-      shortYear: "'" + d.getFullYear().toString().slice(2),
+      shortYear: d.getFullYear() !== now.getFullYear() ? " '" + d.getFullYear().toString().slice(2) : "",
     });
   }
+  return months;
+}
 
-  const monthData = months.map((m) => {
-    const count = comps.filter((c) => {
-      const cd = new Date(c.date + "T00:00:00");
-      return cd.getFullYear() === m.year && cd.getMonth() === m.month;
-    }).length;
-    const medalCount = comps.filter((c) => {
-      const cd = new Date(c.date + "T00:00:00");
-      return (
-        cd.getFullYear() === m.year &&
-        cd.getMonth() === m.month &&
-        c.result &&
-        c.result !== "dnp"
-      );
-    }).length;
-    return { ...m, count, medalCount };
-  });
+function compMatchesMonth(comp: Competition, m: { year: number; month: number }) {
+  const cd = new Date(comp.date + "T00:00:00");
+  return cd.getFullYear() === m.year && cd.getMonth() === m.month;
+}
 
-  const isCurrMonth = (m: (typeof monthData)[0]) =>
-    m.year === now.getFullYear() && m.month === now.getMonth();
+function MonthStrip({
+  comps,
+  selected,
+  onSelect,
+}: {
+  comps: Competition[];
+  selected: MonthKey | null;
+  onSelect: (key: MonthKey | null) => void;
+}) {
+  const scrollRef = useRef<ScrollView>(null);
+  const months = buildMonthStrip();
+  const now = new Date();
 
   return (
-    <View style={calStyles.container}>
-      <Text style={calStyles.title}>COMPETITION CALENDAR</Text>
-      <View style={calStyles.grid}>
-        {monthData.map((m, i) => (
-          <View key={i} style={calStyles.cell}>
-            <View
+    <View style={stripStyles.wrapper}>
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={stripStyles.scroll}
+      >
+        {/* All pill */}
+        <TouchableOpacity
+          style={[stripStyles.pill, selected === null && stripStyles.pillActive]}
+          onPress={() => onSelect(null)}
+          activeOpacity={0.7}
+        >
+          <Text
+            style={[
+              stripStyles.pillText,
+              selected === null && stripStyles.pillTextActive,
+            ]}
+          >
+            All
+          </Text>
+        </TouchableOpacity>
+
+        {months.map((m) => {
+          const count = comps.filter((c) => compMatchesMonth(c, m)).length;
+          const hasMedal = comps.some(
+            (c) =>
+              compMatchesMonth(c, m) && c.result && c.result !== "dnp"
+          );
+          const isCurrent =
+            m.year === now.getFullYear() && m.month === now.getMonth();
+          const isSelected = selected === m.key;
+
+          return (
+            <TouchableOpacity
+              key={m.key}
               style={[
-                calStyles.dot,
-                m.count > 0 && calStyles.dotActive,
-                m.count >= 2 && calStyles.dotHot,
-                m.medalCount > 0 && calStyles.dotMedal,
-                isCurrMonth(m) && m.count === 0 && calStyles.dotCurrent,
+                stripStyles.pill,
+                isSelected && stripStyles.pillActive,
+                isCurrent && !isSelected && stripStyles.pillCurrent,
               ]}
+              onPress={() => onSelect(isSelected ? null : m.key)}
+              activeOpacity={0.7}
             >
-              {m.count > 0 ? (
-                <Text
+              <Text
+                style={[
+                  stripStyles.pillText,
+                  isSelected && stripStyles.pillTextActive,
+                  isCurrent && !isSelected && stripStyles.pillTextCurrent,
+                ]}
+              >
+                {m.label}
+                {m.shortYear}
+              </Text>
+              {count > 0 && (
+                <View
                   style={[
-                    calStyles.dotCount,
-                    m.medalCount > 0 && calStyles.dotCountMedal,
+                    stripStyles.dot,
+                    hasMedal ? stripStyles.dotMedal : stripStyles.dotComp,
                   ]}
-                >
-                  {m.count}
-                </Text>
-              ) : null}
-            </View>
-            <Text
-              style={[
-                calStyles.monthLabel,
-                isCurrMonth(m) && calStyles.monthLabelCurrent,
-              ]}
-            >
-              {m.label}
-            </Text>
-            {(m.month === 0 || i === 0) && (
-              <Text style={calStyles.yearLabel}>{m.shortYear}</Text>
-            )}
-          </View>
-        ))}
-      </View>
-      <View style={calStyles.legend}>
-        <View style={calStyles.legendItem}>
-          <View style={[calStyles.legendDot, { backgroundColor: colors.accent }]} />
-          <Text style={calStyles.legendText}>Competed</Text>
-        </View>
-        <View style={calStyles.legendItem}>
-          <View style={[calStyles.legendDot, { backgroundColor: colors.gold }]} />
-          <Text style={calStyles.legendText}>Won medal</Text>
-        </View>
-      </View>
+                />
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 }
 
-const calStyles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.surface,
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: 24,
+const stripStyles = StyleSheet.create({
+  wrapper: {
+    marginBottom: 20,
+    marginHorizontal: -20,
   },
-  title: {
-    fontFamily: "DMSans_500Medium",
-    fontSize: 12,
-    color: colors.textMuted,
-    letterSpacing: 1,
-    marginBottom: 16,
+  scroll: {
+    paddingHorizontal: 20,
+    gap: 8,
   },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  cell: {
-    width: "16.66%",
-    alignItems: "center",
-    marginBottom: 14,
-  },
-  dot: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.surfaceRaised,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-  },
-  dotActive: {
-    backgroundColor: colors.accent + "30",
-    borderWidth: 1.5,
-    borderColor: colors.accent,
-  },
-  dotHot: {
-    backgroundColor: colors.accent + "50",
-  },
-  dotMedal: {
-    backgroundColor: colors.gold + "25",
-    borderColor: colors.gold,
-  },
-  dotCurrent: {
-    borderWidth: 1,
-    borderColor: colors.textMuted,
-    borderStyle: "dashed",
-  },
-  dotCount: {
-    fontFamily: "DMSans_700Bold",
-    fontSize: 13,
-    color: colors.accent,
-  },
-  dotCountMedal: {
-    color: colors.gold,
-  },
-  monthLabel: {
-    fontFamily: "DMSans_400Regular",
-    fontSize: 10,
-    color: colors.textMuted,
-  },
-  monthLabelCurrent: {
-    color: colors.textPrimary,
-    fontFamily: "DMSans_700Bold",
-  },
-  yearLabel: {
-    fontFamily: "DMSans_400Regular",
-    fontSize: 9,
-    color: colors.textMuted,
-    marginTop: 1,
-  },
-  legend: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 20,
-    marginTop: 4,
-  },
-  legendItem: {
+  pill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  legendDot: {
-    width: 8,
-    height: 8,
+  pillActive: {
+    backgroundColor: colors.accent + "20",
+    borderColor: colors.accent,
+  },
+  pillCurrent: {
+    borderColor: colors.textMuted,
+  },
+  pillText: {
+    fontFamily: "DMSans_500Medium",
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  pillTextActive: {
+    color: colors.accent,
+    fontFamily: "DMSans_700Bold",
+  },
+  pillTextCurrent: {
+    color: colors.textPrimary,
+  },
+  dot: {
+    width: 7,
+    height: 7,
     borderRadius: 4,
   },
-  legendText: {
-    fontFamily: "DMSans_400Regular",
-    fontSize: 10,
-    color: colors.textMuted,
+  dotComp: {
+    backgroundColor: colors.accent,
+  },
+  dotMedal: {
+    backgroundColor: colors.gold,
   },
 });
 
@@ -842,6 +811,7 @@ export default function CompetitionsScreen() {
   const [comps, setComps] = useState<Competition[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState<MonthKey | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!authSession?.user) return;
@@ -870,14 +840,23 @@ export default function CompetitionsScreen() {
     setRefreshing(false);
   }, [fetchData]);
 
+  // Filter by selected month
+  const filtered = selectedMonth
+    ? comps.filter((c) => {
+        const cd = new Date(c.date + "T00:00:00");
+        const key = `${cd.getFullYear()}-${String(cd.getMonth() + 1).padStart(2, "0")}`;
+        return key === selectedMonth;
+      })
+    : comps;
+
   // Split into upcoming and past
   const today = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
-  const upcoming = comps
+  const upcoming = filtered
     .filter((c) => !c.completed && c.date >= todayStr)
     .sort((a, b) => (a.date > b.date ? 1 : -1));
-  const past = comps.filter((c) => c.completed || c.date < todayStr);
+  const past = filtered.filter((c) => c.completed || c.date < todayStr);
 
   if (loading) {
     return (
@@ -912,13 +891,18 @@ export default function CompetitionsScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Month Strip - always visible */}
+        <MonthStrip
+          comps={comps}
+          selected={selectedMonth}
+          onSelect={setSelectedMonth}
+        />
+
         {comps.length === 0 ? (
           <EmptyState />
         ) : (
           <>
             <StatsSummary comps={comps} />
-
-            <CompCalendar comps={comps} />
 
             <YearComparison comps={comps} />
 
@@ -956,6 +940,15 @@ export default function CompetitionsScreen() {
                   />
                 ))}
               </>
+            )}
+
+            {/* No results for selected month */}
+            {selectedMonth && upcoming.length === 0 && past.length === 0 && (
+              <View style={styles.noResults}>
+                <Text style={styles.noResultsText}>
+                  No competitions this month
+                </Text>
+              </View>
             )}
           </>
         )}
@@ -1009,6 +1002,15 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginBottom: 10,
     marginTop: 4,
+  },
+  noResults: {
+    alignItems: "center",
+    paddingVertical: 32,
+  },
+  noResultsText: {
+    fontFamily: "DMSans_400Regular",
+    fontSize: 14,
+    color: colors.textMuted,
   },
   fab: {
     position: "absolute",
