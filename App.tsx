@@ -19,7 +19,7 @@ export default function App() {
   if (!fontsLoaded) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#1A73E8" />
+        <ActivityIndicator size="large" color="#C41E3A" />
       </View>
     );
   }
@@ -27,7 +27,7 @@ export default function App() {
   return (
     <>
       <Navigation />
-      <StatusBar style="auto" />
+      <StatusBar style="light" />
     </>
   );
 }
@@ -37,6 +37,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#08080D",
   },
 });

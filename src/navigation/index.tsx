@@ -7,11 +7,18 @@ import { useSession } from "../hooks/useSession";
 import LoginScreen from "../screens/LoginScreen";
 import SignUpScreen from "../screens/SignUpScreen";
 import ForgotPasswordScreen from "../screens/ForgotPasswordScreen";
+import JournalScreen from "../screens/JournalScreen";
+import LogSessionScreen from "../screens/LogSessionScreen";
 
 export type AuthStackParamList = {
   Login: undefined;
   SignUp: undefined;
   ForgotPassword: undefined;
+};
+
+export type JournalStackParamList = {
+  JournalHome: undefined;
+  LogSession: undefined;
 };
 
 // --- Placeholder tab screens ---
@@ -22,10 +29,6 @@ function PlaceholderScreen({ name }: { name: string }) {
       <Text style={styles.text}>{name}</Text>
     </View>
   );
-}
-
-function JournalScreen() {
-  return <PlaceholderScreen name="Journal" />;
 }
 
 function TechniquesScreen() {
@@ -47,22 +50,40 @@ function ProfileScreen() {
 // --- Navigators ---
 
 const Tab = createBottomTabNavigator();
-const Stack = createNativeStackNavigator<AuthStackParamList>();
+const AuthStack_ = createNativeStackNavigator<AuthStackParamList>();
+const JournalStack = createNativeStackNavigator<JournalStackParamList>();
+
+function JournalStackScreen() {
+  return (
+    <JournalStack.Navigator screenOptions={{ headerShown: false }}>
+      <JournalStack.Screen name="JournalHome" component={JournalScreen} />
+      <JournalStack.Screen
+        name="LogSession"
+        component={LogSessionScreen}
+        options={{ presentation: "modal", animation: "slide_from_bottom" }}
+      />
+    </JournalStack.Navigator>
+  );
+}
 
 function MainTabs() {
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#1A73E8",
-        tabBarInactiveTintColor: "#8E8E93",
+        tabBarActiveTintColor: "#C41E3A",
+        tabBarInactiveTintColor: "#5A5A64",
         tabBarStyle: {
-          backgroundColor: "#FFFFFF",
-          borderTopColor: "#E5E5EA",
+          backgroundColor: "#11111A",
+          borderTopColor: "#1E1E2A",
+        },
+        tabBarLabelStyle: {
+          fontFamily: "DMSans_500Medium",
+          fontSize: 11,
         },
       }}
     >
-      <Tab.Screen name="Journal" component={JournalScreen} />
+      <Tab.Screen name="Journal" component={JournalStackScreen} />
       <Tab.Screen name="Techniques" component={TechniquesScreen} />
       <Tab.Screen name="Coach" component={CoachScreen} />
       <Tab.Screen name="Community" component={CommunityScreen} />
@@ -73,11 +94,11 @@ function MainTabs() {
 
 function AuthStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="SignUp" component={SignUpScreen} />
-      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-    </Stack.Navigator>
+    <AuthStack_.Navigator screenOptions={{ headerShown: false }}>
+      <AuthStack_.Screen name="Login" component={LoginScreen} />
+      <AuthStack_.Screen name="SignUp" component={SignUpScreen} />
+      <AuthStack_.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+    </AuthStack_.Navigator>
   );
 }
 
@@ -89,7 +110,7 @@ export default function Navigation() {
   if (loading) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#1A73E8" />
+        <ActivityIndicator size="large" color="#C41E3A" />
       </View>
     );
   }
@@ -106,17 +127,17 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#08080D",
   },
   text: {
     fontFamily: "DMSans_400Regular",
     fontSize: 18,
-    color: "#1C1C1E",
+    color: "#FFFFFF",
   },
   loading: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#08080D",
   },
 });
