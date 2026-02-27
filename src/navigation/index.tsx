@@ -21,6 +21,8 @@ import AICoachScreen from "../screens/AICoachScreen";
 import JoinGymScreen from "../screens/JoinGymScreen";
 import AddGoalScreen from "../screens/AddGoalScreen";
 import ProgressScreen from "../screens/ProgressScreen";
+import CompetitionsScreen from "../screens/CompetitionsScreen";
+import AddCompetitionScreen from "../screens/AddCompetitionScreen";
 import CommunityScreen from "../screens/CommunityScreen";
 import ComposePostScreen from "../screens/ComposePostScreen";
 import type { Technique } from "../types";
@@ -35,6 +37,8 @@ export type JournalStackParamList = {
   JournalHome: undefined;
   LogSession: undefined;
   Progress: undefined;
+  Competitions: undefined;
+  AddCompetition: undefined;
 };
 
 export type ProfileStackParamList = {
@@ -79,6 +83,12 @@ function JournalStackScreen() {
         options={{ presentation: "modal", animation: "slide_from_bottom" }}
       />
       <JournalStack.Screen name="Progress" component={ProgressScreen} />
+      <JournalStack.Screen name="Competitions" component={CompetitionsScreen} />
+      <JournalStack.Screen
+        name="AddCompetition"
+        component={AddCompetitionScreen}
+        options={{ presentation: "modal", animation: "slide_from_bottom" }}
+      />
     </JournalStack.Navigator>
   );
 }
@@ -232,6 +242,8 @@ const linking: any = {
           JournalHome: "",
           LogSession: "log-session",
           Progress: "progress",
+          Competitions: "competitions",
+          AddCompetition: "add-competition",
         },
       },
       Techniques: {

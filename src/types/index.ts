@@ -97,6 +97,25 @@ export interface Post {
   created_at: string;
 }
 
+export type CompResult = "gold" | "silver" | "bronze" | "dnp" | null;
+
+export interface Competition {
+  id: string;
+  user_id: string;
+  name: string;
+  date: string;
+  location: string | null;
+  division: string | null;
+  weight_class: string | null;
+  gi: boolean;
+  completed: boolean;
+  result: CompResult;
+  matches_won: number;
+  matches_lost: number;
+  notes: string | null;
+  created_at: string;
+}
+
 export interface PostWithAuthor extends Post {
   author_name: string | null;
   author_belt: Belt;
