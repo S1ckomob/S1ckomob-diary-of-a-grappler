@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(where gh:*)",
+      "Bash(git config:*)",
+      "Bash(gh auth:*)",
+      "Bash(\"/c/Program:*)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" auth:*)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" repo:*)",
+      "Bash(git:*)",
+      "Bash(npx expo:*)",
+      "Bash(npm ls:*)",
+      "Bash(npx tsc:*)",
+      "Bash(ls:*)",
+      "Bash(taskkill:*)",
+      "Bash(rm:*)",
+      "Bash(npx kill-port:*)",
+      "Bash(netstat:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(curl:*)",
+      "Bash(npx supabase:*)",
+      "Bash(xargs grep:*)"
+    ]
+  }
+}
