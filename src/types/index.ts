@@ -25,6 +25,8 @@ export interface Profile {
   profile_visible: boolean;
   default_session_type: string;
   default_duration: number;
+  push_token: string | null;
+  training_reminder_time: string;
   subscription_plan: string;
   created_at: string;
 }

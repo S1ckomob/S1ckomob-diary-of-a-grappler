@@ -14,6 +14,11 @@ import {
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../lib/supabase";
+import {
+  scheduleTrainingReminder,
+  scheduleStreakAlert,
+  cancelByIdentifier,
+} from "../lib/notifications";
 import { useSession } from "../hooks/useSession";
 import type { Profile } from "../types";
 import type { ProfileStackParamList } from "../navigation";
@@ -42,6 +47,13 @@ const SESSION_TYPES = [
 ];
 
 const DURATIONS = [30, 45, 60, 90, 120];
+
+const REMINDER_HOURS = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
+
+function formatHour(h: number): string {
+  if (h === 0 || h === 12) return `12${h < 12 ? "am" : "pm"}`;
+  return h < 12 ? `${h}am` : `${h - 12}pm`;
+}
 
 // --- Toggle Row ---
 
@@ -173,6 +185,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const [defaultSessionType, setDefaultSessionType] = useState("rolling");
   const [defaultDuration, setDefaultDuration] = useState(60);
   const [unitSystem, setUnitSystem] = useState("metric");
+  const [reminderTime, setReminderTime] = useState("07:00");
 
   // Account
   const [newEmail, setNewEmail] = useState("");
@@ -198,6 +211,7 @@ export default function SettingsScreen({ navigation }: Props) {
       setDefaultSessionType(p.default_session_type ?? "rolling");
       setDefaultDuration(p.default_duration ?? 60);
       setUnitSystem(p.unit_system ?? "metric");
+      setReminderTime(p.training_reminder_time ?? "07:00");
     }
     setLoading(false);
   }, [authSession?.user]);
@@ -227,6 +241,32 @@ export default function SettingsScreen({ navigation }: Props) {
   ) => {
     setter(newVal);
     saveSettings({ [field]: newVal });
+  };
+
+  const handleToggleTraining = (v: boolean) => {
+    toggleAndSave(setNotifyTraining, "notify_training_reminders", v);
+    if (v) {
+      const [h, m] = reminderTime.split(":").map(Number);
+      scheduleTrainingReminder(h, m);
+    } else {
+      cancelByIdentifier("training-reminder");
+    }
+  };
+
+  const handleToggleStreak = (v: boolean) => {
+    toggleAndSave(setNotifyStreak, "notify_streak_alerts", v);
+    if (v) {
+      scheduleStreakAlert();
+    } else {
+      cancelByIdentifier("streak-alert");
+    }
+  };
+
+  const handleReminderTimeChange = (hour: number) => {
+    const timeStr = `${String(hour).padStart(2, "0")}:00`;
+    setReminderTime(timeStr);
+    saveSettings({ training_reminder_time: timeStr });
+    scheduleTrainingReminder(hour, 0);
   };
 
   const handleChangeEmail = async () => {
@@ -400,17 +440,48 @@ export default function SettingsScreen({ navigation }: Props) {
             label="Training Reminders"
             icon="fitness-outline"
             value={notifyTraining}
-            onToggle={(v) =>
-              toggleAndSave(setNotifyTraining, "notify_training_reminders", v)
-            }
+            onToggle={handleToggleTraining}
           />
+          {notifyTraining && (
+            <View style={styles.reminderTimeSection}>
+              <Text style={styles.prefLabel}>Reminder Time</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.reminderChipsScroll}
+              >
+                {REMINDER_HOURS.map((h) => {
+                  const active =
+                    parseInt(reminderTime.split(":")[0], 10) === h;
+                  return (
+                    <TouchableOpacity
+                      key={h}
+                      style={[
+                        styles.chip,
+                        active && styles.chipActive,
+                      ]}
+                      onPress={() => handleReminderTimeChange(h)}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.chipText,
+                          active && styles.chipTextActive,
+                        ]}
+                      >
+                        {formatHour(h)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
           <ToggleRow
             label="Streak Alerts"
             icon="flame-outline"
             value={notifyStreak}
-            onToggle={(v) =>
-              toggleAndSave(setNotifyStreak, "notify_streak_alerts", v)
-            }
+            onToggle={handleToggleStreak}
           />
           <ToggleRow
             label="Coach Messages"
@@ -804,6 +875,18 @@ const styles = StyleSheet.create({
   },
   toggleTextActive: {
     color: colors.accent,
+  },
+
+  // Reminder time picker
+  reminderTimeSection: {
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  reminderChipsScroll: {
+    flexDirection: "row",
+    gap: 8,
+    paddingBottom: 8,
   },
 
   // Privacy

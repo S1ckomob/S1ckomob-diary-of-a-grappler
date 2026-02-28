@@ -15,6 +15,11 @@ import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import Slider from "@react-native-community/slider";
 import { supabase } from "../lib/supabase";
+import {
+  registerForPushNotifications,
+  scheduleTrainingReminder,
+  scheduleStreakAlert,
+} from "../lib/notifications";
 import type { Belt } from "../types";
 
 // --- Theme ---
@@ -410,6 +415,9 @@ export default function OnboardingScreen({ userId, onComplete }: Props) {
   const handleSave = async () => {
     setSaving(true);
 
+    // Request notification permissions and get push token
+    const pushToken = await registerForPushNotifications();
+
     const { error } = await supabase
       .from("profiles")
       .update({
@@ -428,6 +436,7 @@ export default function OnboardingScreen({ userId, onComplete }: Props) {
         dna_submissions: dnaSubmissions,
         dna_takedowns: dnaTakedowns,
         dna_escapes: dnaEscapes,
+        push_token: pushToken,
       })
       .eq("id", userId);
 
@@ -437,6 +446,10 @@ export default function OnboardingScreen({ userId, onComplete }: Props) {
       Alert.alert("Error", "Could not save profile. Please try again.");
       return;
     }
+
+    // Schedule default notifications (runs in background, no need to await)
+    scheduleTrainingReminder(7, 0);
+    scheduleStreakAlert();
 
     onComplete();
   };
